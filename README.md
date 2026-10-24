@@ -6,11 +6,17 @@ Este repositório começa com **somente leitura e logs no console**. Nenhum logi
 
 - Windows com **Node.js 22.16+** (suporte nativo à execução de TypeScript por remoção de tipos).
 - Os pacotes ZIP produzidos pelo **plugin GTA 6 PIRA Feed V5** devem estar na pasta `publicacoes`.
-- Não há dependências npm, necessidade de instalar Python ou iniciar Chromium para este passo.
+- Sem dependências npm em tempo de execução, nem necessidade de Python ou Chromium nesta fase. O VS Code/TypeScript usa dependências de desenvolvimento para checagem estática.
 
 ## Executar
 
-Dentro da pasta do repositório:
+Dentro da pasta do repositório, instale primeiro os tipos de Node.js e o compilador TypeScript (dependências de desenvolvimento):
+
+```bash
+npm install
+```
+
+Em seguida:
 
 ```bash
 npm run inspect
@@ -55,11 +61,14 @@ Os arquivos exemplo estão em `examples/`. O plugin Feed V5 entrega `LEGENDAS.tx
 
 Veja [docs/SPEC-MVP-01.md](docs/SPEC-MVP-01.md). É obrigatório fornecer `manifest.json`, que liga as mídias do ZIP aos registros da fila. O ZIP da skill sozinho não contém os IDs e horários do Supabase.
 
-## Testes
+## Testes e checagem de tipos
 
 ```bash
+npm run typecheck
 npm test
 ```
+
+Se o VS Code continuar com o diagnóstico `Cannot find name 'Buffer'`, confirme que executou `npm install` na raiz do repositório e reinicie o servidor TypeScript do VS Code (`TypeScript: Restart TS Server`).
 
 Os testes criam pacotes ZIP de exemplo em uma pasta temporária e não dependem de arquivos privados, contas ou rede.
 
