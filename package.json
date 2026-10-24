@@ -1,0 +1,12 @@
+{
+  "name": "automacao-gta-6",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Leitor local de pacotes GTA 6 PIRA Feed V5 (MVP somente console)",
+  "engines": { "node": ">=22.16.0" },
+  "scripts": {
+    "inspect": "node --experimental-strip-types src/cli.ts",
+    "test": "node --experimental-strip-types --test test/*.test.ts"
+  }
+}
