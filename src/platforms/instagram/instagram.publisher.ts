@@ -4,16 +4,26 @@ import {
   type LocalUploadMedia,
   type MusicOptions,
   type MusicResult,
+  type PublicationPreparation,
   type PublicationVerification,
   type SocialPublisher,
 } from "../social-publisher.interface.ts";
 
-/**
- * Contrato de publicação web: Instagram.
- * Somente esqueleto. Não abre abas, não interage com o navegador e não publica.
- */
+/** Instagram: esqueleto sem navegação, publicação ou acesso ao Supabase. */
 export class InstagramPublisher implements SocialPublisher {
   readonly platform = "instagram" as const;
+
+  async prepare(_input: PublicationPreparation): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "prepare");
+  }
+
+  async publish(): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "publish");
+  }
+
+  async verifyPublication(): Promise<PublicationVerification> {
+    throw new PlatformStepNotImplementedError(this.platform, "verifyPublication");
+  }
 
   async openTab(): Promise<void> {
     throw new PlatformStepNotImplementedError(this.platform, "openTab");
@@ -29,18 +39,6 @@ export class InstagramPublisher implements SocialPublisher {
 
   async setCaption(_caption: string): Promise<void> {
     throw new PlatformStepNotImplementedError(this.platform, "setCaption");
-  }
-
-  async setMusic(_options: MusicOptions): Promise<MusicResult> {
-    throw new PlatformStepNotImplementedError(this.platform, "setMusic");
-  }
-
-  async publish(): Promise<void> {
-    throw new PlatformStepNotImplementedError(this.platform, "publish");
-  }
-
-  async verifyPublication(): Promise<PublicationVerification> {
-    throw new PlatformStepNotImplementedError(this.platform, "verifyPublication");
   }
 
   async closeTab(): Promise<void> {
