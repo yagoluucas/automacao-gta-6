@@ -4,16 +4,26 @@ import {
   type LocalUploadMedia,
   type MusicOptions,
   type MusicResult,
+  type PublicationPreparation,
   type PublicationVerification,
   type SocialPublisher,
 } from "../social-publisher.interface.ts";
 
-/**
- * Contrato de publicação web: YouTube.
- * Somente esqueleto. Não abre abas, não interage com o navegador e não publica.
- */
+/** YouTube: esqueleto sem navegação, publicação ou acesso ao Supabase. */
 export class YouTubePublisher implements SocialPublisher {
   readonly platform = "youtube" as const;
+
+  async prepare(_input: PublicationPreparation): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "prepare");
+  }
+
+  async publish(): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "publish");
+  }
+
+  async verifyPublication(): Promise<PublicationVerification> {
+    throw new PlatformStepNotImplementedError(this.platform, "verifyPublication");
+  }
 
   async openTab(): Promise<void> {
     throw new PlatformStepNotImplementedError(this.platform, "openTab");
@@ -33,14 +43,6 @@ export class YouTubePublisher implements SocialPublisher {
 
   async setMusic(_options: MusicOptions): Promise<MusicResult> {
     throw new PlatformStepNotImplementedError(this.platform, "setMusic");
-  }
-
-  async publish(): Promise<void> {
-    throw new PlatformStepNotImplementedError(this.platform, "publish");
-  }
-
-  async verifyPublication(): Promise<PublicationVerification> {
-    throw new PlatformStepNotImplementedError(this.platform, "verifyPublication");
   }
 
   async closeTab(): Promise<void> {
