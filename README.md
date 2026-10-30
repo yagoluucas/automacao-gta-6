@@ -10,25 +10,46 @@ Este repositório começa com **somente leitura e logs no console**. Nenhum logi
 
 ## Executar
 
-Dentro da pasta do repositório, instale primeiro os tipos de Node.js e o compilador TypeScript (dependências de desenvolvimento):
+Instale as dependências de desenvolvimento:
 
 ```bash
 npm install
 ```
 
-Em seguida:
+### Execução rápida com `.env.local`
+
+Crie um arquivo `.env.local` na raiz deste repositório, indicando **onde estão salvas as publicações**:
+
+```dotenv
+PUBLICATIONS_DIR="D:\\programacao\\projetos\\bot-publicacao-gta\\publicacoes"
+```
+
+Substitua o caminho pelo diretório real do seu computador. Também é possível usar `PUBLICATIONS_DIR=./publicacoes` (caminho relativo à raiz do projeto). Consulte `.env.example` para um exemplo sem dados privados.
+
+Depois execute:
+
+```bash
+npm run dev
+```
+
+O script lê automaticamente os arquivos opcionais `.env` e `.env.local`, nessa ordem, usando o suporte nativo do Node.js. **Não precisa instalar `dotenv`**. O arquivo `.env.local` não é enviado ao Git.
+
+A prioridade da configuração é: **`--dir` > variável `PUBLICATIONS_DIR` já definida no terminal > `.env.local` > `.env` > `./publicacoes`**. Se os dois arquivos de ambiente não existirem, o comando continua funcionando com o diretório padrão.
+
+Para selecionar outra pasta apenas em uma execução:
+
+```bash
+npm run dev -- --dir "D:\\outra-pasta\\publicacoes"
+```
+
+O comando legado continua disponível:
 
 ```bash
 npm run inspect
+npm run inspect -- --dir "D:\\programacao\\projetos\\bot-publicacao-gta\\publicacoes"
 ```
 
-Isso procura, por padrão, em `./publicacoes` (por exemplo, `D:\programacao\projetos\bot-publicacao-gta\publicacoes` quando o repositório estiver em `D:\programacao\projetos\bot-publicacao-gta`). Para apontar outro diretório:
-
-```bash
-npm run inspect -- --dir "D:\programacao\projetos\bot-publicacao-gta\publicacoes"
-```
-
-Ou defina a variável `PUBLICATIONS_DIR` no ambiente. **Não há leitura do Supabase nesta etapa**; toda a entrada é local.
+`npm run inspect` usa o ambiente já definido no terminal, mas não carrega os arquivos `.env` e `.env.local` automaticamente. **Ambos os comandos apenas inspecionam pacotes locais; não publicam nas redes sociais e não consultam o Supabase.**
 
 ## O que será mostrado no console
 
