@@ -1,10 +1,9 @@
 import type { Platform } from "../contracts.ts";
-import type { MediaType, PublicationAsset } from "../publication-contracts.ts";
+import type { MediaType, PreparedPublication, PublicationAsset } from "../publication-contracts.ts";
 
 /**
- * Arquivos finais prontos para o upload no navegador.
- * São caminhos locais absolutos, resolvidos futuramente a partir do ZIP validado.
- * NUNCA apontam diretamente para o Storage original do Supabase.
+ * Mídias finais extraídas/validadas por outra camada do bot, prontas para o navegador.
+ * Não são URLs do Storage original nem caminhos fornecidos diretamente pelo usuário.
  */
 export interface LocalUploadMedia {
   readonly absolutePath: string;
@@ -12,22 +11,29 @@ export interface LocalUploadMedia {
   readonly mimeType: PublicationAsset["mimeType"];
 }
 
-/** Configuração opcional, a aplicar somente quando a plataforma permitir. */
+export interface PublicationPreparation {
+  readonly publication: PreparedPublication;
+  readonly mediaFiles: readonly LocalUploadMedia[];
+}
+
+/**
+ * Capacidade opcional. Declarar MusicOptions não implica suporte a música
+ * no Instagram Web ou em qualquer outro compositor.
+ */
 export interface MusicOptions {
   readonly trackName: string;
   readonly artistName?: string;
-  /** 0–100, quando houver controle de volume na interface. */
+  /** Percentual solicitado (0 a 100), se houver controle de volume. */
   readonly volumePercent?: number;
   readonly startSeconds?: number;
 }
 
-export type MusicResult =
-  | { readonly status: "applied" }
-  | { readonly status: "unsupported"; readonly reason: string };
+export type MusicResult = { readonly status: "applied" };
 
 /**
- * Só é confirmação se houver prova verificável da postagem externa.
- * Resultados ambíguos devem ir para review_required, SEM retry automático.
+ * Verificação de fato consumado: clicar em publicar não confirma sucesso.
+ * Se o resultado for incerto, a camada de orquestração deve exigir revisão,
+ * sem executar a publicação novamente automaticamente.
  */
 export type PublicationVerification =
   | ({
@@ -40,53 +46,42 @@ export type PublicationVerification =
   | { readonly status: "unconfirmed"; readonly reason: string };
 
 /**
- * Contrato de operações de interface web. Uma implementação por plataforma.
+ * Contrato mínimo, compartilhado por todas as plataformas web.
  *
- * Fluxo esperado:
- *   openTab -> openComposer -> uploadMedia -> setCaption -> [setMusic]
- *   -> publish -> verifyPublication -> closeTab
+ * O orquestrador chama prepare -> publish -> verifyPublication.
+ * Os métodos opcionais são etapas/capacidades que uma plataforma PODE expor,
+ * não uma lista de passos obrigatórios nem uma promessa de suporte funcional.
  *
- * 'publish' é o limite de efeito externo: NUNCA deve ser chamado na simulação
- * ou reexecutado após um resultado incerto sem reconciliação da postagem.
+ * publish tem efeito externo e nunca deve ser chamado num dry run.
  */
 export interface SocialPublisher {
   readonly platform: Platform;
 
-  /** Abrir nova aba da rede social na sessão de navegador já autorizada. */
-  openTab(): Promise<void>;
+  /** Preparação completa a partir de um trabalho local já validado. */
+  prepare(input: PublicationPreparation): Promise<void>;
 
-  /** Navegar e selecionar o compositor correspondente ao formato preparado. */
-  openComposer(mediaType: MediaType): Promise<void>;
-
-  /** Selecionar mídia(s) locais prontas; não extrair ZIP nem consultar Supabase aqui. */
-  uploadMedia(files: readonly LocalUploadMedia[]): Promise<void>;
-
-  /** Inserir a legenda específica da rede social. */
-  setCaption(caption: string): Promise<void>;
-
-  /**
-   * Método presente em todas as classes, mas chamada opcional.
-   * Deve retornar "unsupported" quando a função de música/volume não existir.
-   */
-  setMusic(options: MusicOptions): Promise<MusicResult>;
-
-  /** Confirmar envio na interface web. EFEITO EXTERNO, não idempotente. */
+  /** Ponto de efeito externo. Não repetir após resultado ambíguo. */
   publish(): Promise<void>;
 
-  /** Verificar postagem com evidência, nunca inferir sucesso apenas pelo clique. */
+  /** Verificar evidências externas da publicação realizada. */
   verifyPublication(): Promise<PublicationVerification>;
 
-  /** Fechar a aba aberta pelo serviço, preservando outras abas/sessões. */
-  closeTab(): Promise<void>;
+  /** Operações opcionais, usadas internamente conforme o fluxo da rede. */
+  openTab?(): Promise<void>;
+  openComposer?(mediaType: MediaType): Promise<void>;
+  uploadMedia?(files: readonly LocalUploadMedia[]): Promise<void>;
+  setCaption?(caption: string): Promise<void>;
+  setMusic?(options: MusicOptions): Promise<MusicResult>;
+  closeTab?(): Promise<void>;
 }
 
 export type SocialPublisherStep =
-  | "openTab" | "openComposer" | "uploadMedia" | "setCaption"
+  | "prepare" | "openTab" | "openComposer" | "uploadMedia" | "setCaption"
   | "setMusic" | "publish" | "verifyPublication" | "closeTab";
 
 /**
- * Falha explícita e previsível. Nenhum stub simula publicação ou devolve sucesso.
- * As classes serão implementadas posteriormente com Playwright.
+ * Os esqueletos falham explicitamente. Nenhum método simula êxito nem
+ * interage com navegador, arquivos locais ou Supabase nesta fase.
  */
 export class PlatformStepNotImplementedError extends Error {
   readonly code = "PLATFORM_STEP_NOT_IMPLEMENTED" as const;
