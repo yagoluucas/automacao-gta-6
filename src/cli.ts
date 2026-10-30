@@ -3,7 +3,7 @@ import { inspectRoot, type InspectionResult } from "./inspector.ts";
 
 function directoryFromArgs(args: string[]): string {
   if (args.includes("--help") || args.includes("-h")) {
-    console.log("Uso: npm run inspect -- --dir <pasta>\nPadrão: PUBLICATIONS_DIR ou ./publicacoes\nEste comando NÃO publica em redes sociais.");
+    console.log("Uso: npm run dev -- --dir <pasta> (ou npm run inspect -- --dir <pasta>)\nPadrão: PUBLICATIONS_DIR ou ./publicacoes\nO modo dev carrega .env e .env.local automaticamente.\nEste comando NÃO publica em redes sociais.");
     process.exit(0);
   }
   const idx = args.indexOf("--dir");
