@@ -1,34 +1,29 @@
-# Contrato de publicação web — esqueleto das plataformas
+# SocialPublisher — contrato mínimo e capacidades opcionais
 
 ## Objetivo
-Definir a interface `SocialPublisher` e as implementações específicas `InstagramPublisher`, `TikTokPublisher` e `YouTubePublisher`. Esta etapa **não instala Playwright, não abre abas e não realiza postagens**.
+As três classes (`InstagramPublisher`, `TikTokPublisher`, `YouTubePublisher`) implementam a interface comum `SocialPublisher`. Nesta etapa, todos os métodos criados lançam `PlatformStepNotImplementedError`: **não há Playwright, navegação nem publicação real**.
 
-## Ciclo de vida
-| Ordem | Método | Descrição |
-|---|---|---|
-| 1 | `openTab()` | Abrir uma nova aba na sessão existente do navegador |
-| 2 | `openComposer(mediaType)` | Abrir o editor para Feed, Carrossel ou Vídeo |
-| 3 | `uploadMedia(files)` | Selecionar arquivos finais já preparados localmente |
-| 4 | `setCaption(caption)` | Colocar a legenda específica da rede |
-| 5 opcional | `setMusic(options)` | Inserir música e opcionalmente volume de 0 a 100 e início; retornar `unsupported` se a plataforma não permitir |
-| 6 | `publish()` | Acionar a confirmação externa (NUNCA num dry run) |
-| 7 | `verifyPublication()` | Verificar publicação e devolver confirmação com ID/URL, ou resultado inconclusivo |
-| 8 | `closeTab()` | Fechar apenas a aba pertencente ao serviço |
+## Métodos obrigatórios
+- `prepare(input: PublicationPreparation)`: preparar um trabalho já validado localmente, incluindo seus arquivos finais, mídia e legenda.
+- `publish()`: confirmação externa de postagem. Não executar em dry run e não repetir após resultado incerto.
+- `verifyPublication()`: confirmar postagem por evidência, ou retornar resultado inconclusivo.
 
-`MusicOptions` modela uma solicitação, não promete suporte a todas as plataformas ou formatos. A decisão de chamar o método é do orquestrador, depois de verificar capacidades concretas. Os métodos de navegação/selectors serão específicos de cada classe; não haverá contrato separado para cada botão ou seletor CSS, pois isso é detalhe de implementação.
+## Capacidades opcionais
+- `openTab?()`: abrir uma nova aba.
+- `openComposer?(mediaType)`: localizar e abrir o compositor.
+- `uploadMedia?(files)`: selecionar os arquivos locais preparados.
+- `setCaption?(caption)`: preencher a legenda.
+- `setMusic?(options)`: solicitar música, faixa inicial e volume quando a interface permitir.
+- `closeTab?()`: encerrar apenas a aba do serviço.
 
-## Responsabilidades
-- A pasta local é a fonte do conteúdo, não o Supabase.
-- O leitor atual e `PreparedPublication` não foram alterados.
-- `LocalUploadMedia` descreve caminhos de arquivos finais resolvidos no computador. O fluxo de extração segura do ZIP e a gestão das sessões do navegador ainda serão projetados.
-- Os IDs do Supabase permanecem no contrato de publicação preparada, fora das classes web.
-- A classe web deve usar o tratador centralizado de erros nas implementações futuras.
-- As classes não devem escrever no banco; o orquestrador cuidará de registrar o resultado por meio do backend autorizado.
+Não é necessário implementar métodos opcionais. O código que os utilizar deverá verificar primeiro se o método existe. A ausência de `setMusic` não impede a publicação; se a música for um requisito indispensável da publicação, a camada de orquestração deverá rejeitar a tarefa antes de iniciar a postagem.
 
-## Segurança da implantação
-Cada método das classes lança `PlatformStepNotImplementedError`, inclusive `publish`. Isso impede que o esqueleto sinalize sucesso sem interação real. Nenhum arquivo de credenciais é criado, nenhuma automação do navegador é inicializada e `npm run dev` permanece inalterado.
+**Instagram Web:** `InstagramPublisher` não implementa `setMusic`. Nenhuma extensão paga ou artifício alternativo será acrescentado. O método continua opcional e não estará disponível nessa classe.
 
-Antes de implementar as plataformas, será preciso: definir as capacidades por rede e tipo de mídia; conectar o Playwright ao gerenciador de sessões; resolver arquivos finais e verificar extensões/formatos; e estabelecer a reconciliação de postagens incertas para evitar duplicidade.
+**TikTok / YouTube:** os esqueletos atuais declaram `setMusic` apenas como ponto de implementação futura, sem garantir que a interface web/conta/formato suporta o recurso. Antes de publicar, verificar capacidades efetivas e remover o método onde não fizer sentido.
+
+## Responsabilidades e limitações
+O pacote local preparado e seus IDs provenientes do Supabase continuam sendo a entrada. As classes web não consultam o banco nem são responsáveis pelo estado da fila, retentativas ou sincronização. O serviço web lidará somente com interações da plataforma. O leitor e `npm run dev` não foram alterados.
 
 ## Verificação
 ```bash
