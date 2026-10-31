@@ -11,28 +11,15 @@ Validar **somente no console** os pacotes locais já gerados pela skill GTA 6 PI
 - **Leitor Node/TypeScript**: lê as pastas e **confere**, mas não modifica, imagens, textos ou dados do Supabase.
 - **Playwright/Chromium**: planejado para versão posterior. Não instalado, não inicializado e não invocado neste MVP.
 
-## Contrato `manifest.json` v1
-
-```json
-{
-  "schema_version": 1,
-  "image_id": "11111111-1111-4111-8111-111111111111",
-  "rule_set_code": "noticias",
-  "approach": "noticia",
-  "translate": false,
-  "zip_file": "publifeed_2310261200.zip",
-  "publications": [
-    { "id": "22222222-2222-4222-8222-222222222222", "platform": "instagram", "scheduled_at": "2026-10-23T15:00:00-03:00" },
-    { "id": "33333333-3333-4333-8333-333333333333", "platform": "youtube", "scheduled_at": "2026-10-23T15:00:00-03:00" },
-    { "id": "44444444-4444-4444-8444-444444444444", "platform": "tiktok", "scheduled_at": "2026-10-23T15:00:00-03:00" }
-  ]
-}
-```
+## Contrato `manifest.json`
 
 - `image_id`: nome da pasta do trabalho, correspondente à imagem original em `images.id`.
-- `publications`: apenas as redes agendadas de fato em `image_publications` (uma entrada por rede).
-- `scheduled_at`: ISO 8601 com fuso; deve representar o mesmo instante em todas as redes da imagem.
-- `zip_file`: apenas o nome do ZIP gerado pela V5, sem subdiretórios.
+- `platforms`: apenas as redes agendadas de fato em `image_publications`, sem repetição.
+- `publication_ids`: ID de cada rede listada em `platforms`.
+- `scheduled_at`: ISO 8601 com fuso, compartilhado pelas redes da imagem.
+- `rule_set_code` e `approach`: regra e abordagem editorial do pacote.
+- `translation`: indicador booleano de tradução.
+- `zip`: apenas o nome do ZIP gerado pela V5, sem subdiretórios.
 - `ready.json`: objeto JSON com `ready: true`, escrito somente quando os arquivos estiverem completos.
 - A publicação programada permanece responsabilidade do Supabase; nenhuma data é inferida do nome ZIP.
 

@@ -4,7 +4,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { AppError, normalizeError } from "../src/errors/catalog.ts";
-import { captureError, createJsonErrorRecorder, makeErrorRecord, type ErrorRecord } from "../src/errors/handler.ts";
+import { captureError } from "../src/errors/handler.ts";
+import type { ErrorRecord } from "../src/errors/types.ts";
+import { isValidUuid } from "../src/ids.ts";
 import { withPublicationRetry } from "../src/errors/retry.ts";
 import { toFailureSyncPayload } from "../src/errors/supabase-sync.ts";
 
@@ -77,9 +79,8 @@ test("resultado ambíguo não tenta novamente", async () => {
 test("logs locais são JSON individuais, sem vazar informações inesperadas", async t => {
   const folder = await mkdtemp(path.join(tmpdir(), "bot-errors-"));
   t.after(() => rm(folder, { recursive: true, force: true }));
-  const recorder = createJsonErrorRecorder(folder);
-  await captureError(new Error("Senha privada token=SECRET"), identity, recorder);
-  await captureError(new AppError("CAPTION_MISSING"), identity, recorder);
+  await captureError(new Error("Senha privada token=SECRET"), identity, { logDirectory: folder });
+  await captureError(new AppError("CAPTION_MISSING"), identity, { logDirectory: folder });
   const files = await readdir(folder);
   assert.equal(files.length, 2);
   const text = (await Promise.all(files.map(f => readFile(path.join(folder, f), "utf8")))).join("\n");
@@ -89,13 +90,23 @@ test("logs locais são JSON individuais, sem vazar informações inesperadas", a
   assert.ok(events.every(e => e.imageId === identity.imageId && e.publicationId === identity.publicationId));
 });
 
-test("sincronização só é permitida com IDs válidos e erro final", () => {
-  const retry = makeErrorRecord(new AppError("RATE_LIMITED"), identity, { attempt: 1, maxAttempts: 3 });
+test("sincronização só é permitida com IDs válidos e erro final", async () => {
+  const retry = await captureError(new AppError("RATE_LIMITED"), identity, { attempt: 1, maxAttempts: 3, recorder: async () => {} });
   assert.equal(toFailureSyncPayload(retry), null);
-  const exhausted = makeErrorRecord(new AppError("RATE_LIMITED"), identity, { attempt: 3, maxAttempts: 3 });
+  const exhausted = await captureError(new AppError("RATE_LIMITED"), identity, { attempt: 3, maxAttempts: 3, recorder: async () => {} });
   assert.deepEqual(toFailureSyncPayload(exhausted)?.status, "failed");
-  const unlinked = makeErrorRecord(new AppError("MEDIA_MISSING"), { stage: "inspection" });
+  const unlinked = await captureError(new AppError("MEDIA_MISSING"), { stage: "inspection" }, { recorder: async () => {} });
   assert.equal(toFailureSyncPayload(unlinked), null);
+});
+
+test("UUID compartilhado preserva IDs válidos e descarta inválidos", async () => {
+  assert.equal(isValidUuid(identity.imageId), true);
+  assert.equal(isValidUuid("not-a-uuid"), false);
+  const record = await captureError(new AppError("MEDIA_MISSING"),
+    { ...identity, imageId: "bad", publicationId: "bad" }, { recorder: async () => {} });
+  assert.equal(record.imageId, null);
+  assert.equal(record.publicationId, null);
+  assert.equal(toFailureSyncPayload(record), null);
 });
 
 test("classifica erros do leitor e não vaza o texto original", () => {

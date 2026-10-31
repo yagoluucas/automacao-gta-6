@@ -8,7 +8,7 @@
     "node": ">=22.16.0"
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --experimental-strip-types src/cli.ts",
+    "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --experimental-strip-types src/cli.ts --chrome",
     "inspect": "node --experimental-strip-types src/cli.ts",
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
@@ -16,5 +16,8 @@
   "devDependencies": {
     "@types/node": "22.19.7",
     "typescript": "5.8.3"
+  },
+  "dependencies": {
+    "playwright-core": "1.56.1"
   }
 }

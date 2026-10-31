@@ -2,11 +2,35 @@
 
 Este repositório começa com **somente leitura e logs no console**. Nenhum login, postagem, controle do navegador, interação com Supabase ou agendamento do processo local é executado nesta fase.
 
+## MVP 02 — Abrir Google Chrome antes da inspeção
+
+O comando `npm run dev` abre **uma janela nova do Google Chrome**, maximizada (sem F11), com três abas (Instagram, TikTok e YouTube), antes de ler a pasta de publicações. Não executa login, não preenche credenciais e não publica. Use `npm run inspect` para executar somente o leitor, sem navegador.
+
+Requisitos: Google Chrome instalado localmente e `npm install` para instalar `playwright-core` (não é necessário executar `playwright install`, pois o canal `chrome` usa o Chrome já instalado).
+
+Exemplo de `.env.local`:
+
+```dotenv
+PUBLICATIONS_DIR=../publicacoes
+LINK_INSTAGRAM=https://www.instagram.com/
+LINK_TIKTOK=https://www.tiktok.com/pt-BR/
+LINK_YOUTUBE=https://www.youtube.com/
+```
+
+**Atenção:** os links precisam ser URLs puras, sem `[...](...)` da formatação Markdown. `USER_INSTAGRAM`, `PASSWORD_INSTAGRAM` e equivalentes, mesmo que estejam no `.env.local`, **não são lidos nesta fase**. Nunca registre credenciais ou arquivos de sessão no Git.
+
+
+Se o terminal avisar `.env.local not found`, isso é apenas um aviso: o Node pode continuar usando `.env` ou os valores padrão. Se a pasta `PUBLICATIONS_DIR` não existir, a inspeção será ignorada com aviso claro, e o Chrome continuará aberto; nenhuma pasta será criada automaticamente. Crie a pasta ou ajuste o caminho real em `.env.local` para habilitar a inspeção. Erros de acesso a diretórios existentes continuam sendo reportados.
+
+O navegador usa o perfil próprio `.chrome-profile/`, ignorado pelo Git; ele não assume o controle do seu Chrome pessoal. Faça login manualmente se a rede solicitar. Evite iniciar dois bots simultaneamente usando o mesmo perfil. O programa continua aberto até você fechar a janela do Chrome. A maximização é solicitada via `--start-maximized` e pode depender do sistema operacional/gerenciador de janelas.
+
+`npm run dev` continua executando o leitor e mostrando o resumo no console após iniciar as abas. Caso uma página não carregue, o erro é listado por rede, mas as outras abas continuam acessíveis. Se o Chrome não estiver instalado, o processo falhará de forma explícita.
+
 ## Requisitos
 
 - Windows com **Node.js 22.16+** (suporte nativo à execução de TypeScript por remoção de tipos).
 - Os pacotes ZIP produzidos pelo **plugin GTA 6 PIRA Feed V5** devem estar na pasta `publicacoes`.
-- Sem dependências npm em tempo de execução, nem necessidade de Python ou Chromium nesta fase. O VS Code/TypeScript usa dependências de desenvolvimento para checagem estática.
+- A execução do modo navegador utiliza a dependência `playwright-core` e uma instalação local do Google Chrome. Não faz download automático do Chromium.
 
 ## Executar
 
@@ -24,7 +48,7 @@ Crie um arquivo `.env.local` na raiz deste repositório, indicando **onde estão
 PUBLICATIONS_DIR="D:\\programacao\\projetos\\bot-publicacao-gta\\publicacoes"
 ```
 
-Substitua o caminho pelo diretório real do seu computador. Também é possível usar `PUBLICATIONS_DIR=./publicacoes` (caminho relativo à raiz do projeto). Consulte `.env.example` para um exemplo sem dados privados.
+Substitua o caminho pelo diretório real do seu computador. Também é possível usar `PUBLICATIONS_DIR=../publicacoes` (caminho relativo à raiz do projeto). Consulte `.env.example` para um exemplo sem dados privados.
 
 Depois execute:
 
@@ -34,7 +58,7 @@ npm run dev
 
 O script lê automaticamente os arquivos opcionais `.env` e `.env.local`, nessa ordem, usando o suporte nativo do Node.js. **Não precisa instalar `dotenv`**. O arquivo `.env.local` não é enviado ao Git.
 
-A prioridade da configuração é: **`--dir` > variável `PUBLICATIONS_DIR` já definida no terminal > `.env.local` > `.env` > `./publicacoes`**. Se os dois arquivos de ambiente não existirem, o comando continua funcionando com o diretório padrão.
+A prioridade da configuração é: **`--dir` > variável `PUBLICATIONS_DIR` já definida no terminal > `.env.local` > `.env` > `../publicacoes`**. Se os dois arquivos de ambiente não existirem, o comando continua funcionando com o diretório padrão.
 
 Para selecionar outra pasta apenas em uma execução:
 

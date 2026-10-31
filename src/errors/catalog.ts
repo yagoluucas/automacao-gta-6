@@ -15,6 +15,9 @@ export const ERROR_CATALOG = {
   UNEXPECTED_ERROR: { kind: "uncertain", description: "Falha inesperada; o resultado da operação precisa ser verificado." },
   OPTIONAL_METADATA_MISSING: { kind: "warning", description: "Informação opcional ausente; operação pode continuar." },
   STATUS_SYNC_FAILED: { kind: "warning", description: "Falha ao sincronizar o resultado com o Supabase; atualização pendente." },
+  PUBLICATIONS_DIR_MISSING: { kind: "warning", description: "Diretório local de publicações não encontrado; inspeção ignorada até que esteja disponível." },
+  PUBLICATIONS_DIR_NOT_DIRECTORY: { kind: "fatal", description: "O caminho configurado para publicações não é uma pasta." },
+  PUBLICATIONS_DIR_ACCESS_DENIED: { kind: "fatal", description: "Sem permissão para acessar o diretório local de publicações." },
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CATALOG;
@@ -22,9 +25,12 @@ export type ErrorKind = (typeof ERROR_CATALOG)[ErrorCode]["kind"];
 export type ErrorStage = "inspection" | "preparation" | "publication" | "verification" | "database" | "runtime";
 
 export class AppError extends Error {
-  constructor(public readonly code: ErrorCode) {
+  readonly code: ErrorCode;
+
+  constructor(code: ErrorCode) {
     super(ERROR_CATALOG[code].description);
     this.name = "AppError";
+    this.code = code;
   }
 }
 
