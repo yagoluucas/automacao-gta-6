@@ -1,4 +1,5 @@
 import path from "node:path";
+import { startSocialBrowser } from "./browser/chrome-startup.ts";
 import { captureError } from "./errors/handler.ts";
 import { inspectRoot, type InspectionResult } from "./inspector.ts";
 
@@ -34,6 +35,13 @@ function show(result: InspectionResult): void {
 
 try {
   const root = directoryFromArgs(process.argv.slice(2));
+  const session = process.env.BOT_OPEN_CHROME === "1" ? await startSocialBrowser() : null;
+  if (session) {
+    console.log("[CHROME] Chrome aberto em tela cheia: Instagram, TikTok e YouTube.");
+    if (session.navigationFailures.length) {
+      console.warn("[CHROME] Abas com falha de carregamento:", session.navigationFailures.join(", "));
+    }
+  }
   console.log(`GTA 6 PIRA | Leitor local V5 | MODO SOMENTE LEITURA\nPasta: ${root}`);
   const results = await inspectRoot(root);
   for (const result of results) {
@@ -50,6 +58,10 @@ try {
   console.log(`\nResumo: ${count("OK")} válidos, ${count("PENDING")} aguardando, ${count("ERROR")} com erro (${results.length} trabalho(s)).`);
   if (!results.length) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
   if (count("ERROR")) process.exitCode = 1;
+  if (session) {
+    console.log("[CHROME] Feche a janela do Chrome para encerrar.");
+    await new Promise<void>(resolve => session.context.once("close", () => resolve()));
+  }
 } catch (error) {
   try {
     const record = await captureError(error, { stage: "runtime" });
