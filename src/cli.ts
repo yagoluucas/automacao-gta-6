@@ -4,6 +4,8 @@ import { startSocialBrowser } from "./browser/chrome-startup.ts";
 import { captureError } from "./errors/handler.ts";
 import { AppError } from "./errors/catalog.ts";
 import { inspectRoot, type InspectionResult } from "./inspector.ts";
+import { findYouTubeShortDrafts, selectYouTubeShortDraft } from "./publication/youtube-short-drafts.ts";
+import { previewYouTubeShort, readYouTubePreviewConfig } from "./platforms/youtube/youtube-preview.ts";
 
 function directoryFromArgs(args: string[]): string {
   if (args.includes("--help") || args.includes("-h")) {
@@ -65,7 +67,18 @@ try {
       throw error;
     }
   }
-  const results = folderExists ? await inspectRoot(root) : [];
+  const youtubePreview = process.argv.includes("--youtube-preview");
+  if (youtubePreview) {
+    if (!session) throw new Error("Prévia do YouTube exige o modo Chrome.");
+    if (!folderExists) throw new Error("Diretório local não disponível para prévia.");
+    const idIndex = process.argv.indexOf("--image-id");
+    const imageId = idIndex < 0 ? undefined : process.argv[idIndex + 1];
+    if (idIndex >= 0 && !imageId) throw new Error("Informe um UUID após --image-id.");
+    const draft = selectYouTubeShortDraft(await findYouTubeShortDrafts(root), imageId);
+    console.log("[YOUTUBE] Preparando rascunho para inspeção:", draft.publicationId);
+    await previewYouTubeShort(session.context, draft, readYouTubePreviewConfig(process.env));
+  }
+  const results = folderExists && !youtubePreview ? await inspectRoot(root) : [];
   for (const result of results) {
     show(result);
     if (result.status === "ERROR") {
@@ -78,7 +91,7 @@ try {
   }
   const count = (status: InspectionResult["status"]) => results.filter((r) => r.status === status).length;
   console.log(`\nResumo: ${count("OK")} válidos, ${count("PENDING")} aguardando, ${count("ERROR")} com erro (${results.length} trabalho(s)).`);
-  if (!results.length) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
+  if (!results.length && !youtubePreview) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
   if (count("ERROR")) process.exitCode = 1;
   if (session) {
     console.log("[CHROME] Feche a janela do Chrome para encerrar.");
