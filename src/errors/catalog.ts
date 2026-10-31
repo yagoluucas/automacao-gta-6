@@ -18,6 +18,7 @@ export const ERROR_CATALOG = {
   PUBLICATIONS_DIR_MISSING: { kind: "warning", description: "Diretório local de publicações não encontrado; inspeção ignorada até que esteja disponível." },
   PUBLICATIONS_DIR_NOT_DIRECTORY: { kind: "fatal", description: "O caminho configurado para publicações não é uma pasta." },
   PUBLICATIONS_DIR_ACCESS_DENIED: { kind: "fatal", description: "Sem permissão para acessar o diretório local de publicações." },
+  CHROME_PROFILE_IN_USE: { kind: "fatal", description: "O Chrome do bot já está aberto com este perfil. Feche a janela anterior antes de executar npm run dev novamente." },
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CATALOG;
@@ -39,6 +40,7 @@ export function normalizeError(error: unknown): ErrorCode {
   if (error instanceof AppError) return error.code;
   const raw = error instanceof Error ? error.message : typeof error === "string" ? error : "";
   const value = raw.toLowerCase();
+  if (/navegador existente|existing browser session|user data directory.*(?:in use|being used)/.test(value)) return "CHROME_PROFILE_IN_USE";
   if (/scheduled_at|horário agendado|data de publicação/.test(value)) return "SCHEDULE_INVALID";
   if (/faltou .*\.png|mídia.*ausente|mídia não encontrada|imagem não encontrada/.test(value)) return "MEDIA_MISSING";
   if (/faltou .*legenda_|legenda.*vazia|legenda.*não encontrad|legendas\.txt não encontrad/.test(value)) return "CAPTION_MISSING";

@@ -113,5 +113,7 @@ test("classifica erros do leitor e não vaza o texto original", () => {
   assert.equal(normalizeError(new Error("Faltou INSTAGRAM.png ou LEGENDA_INSTAGRAM.txt")), "MEDIA_MISSING");
   assert.equal(normalizeError(new Error("scheduled_at inválido")), "SCHEDULE_INVALID");
   assert.equal(normalizeError(new Error("Legenda INSTAGRAM diverge de LEGENDAS.txt")), "CAPTION_INVALID");
+  assert.equal(normalizeError(new Error("Abrindo em uma sessão de navegador existente.")), "CHROME_PROFILE_IN_USE");
+  assert.equal(normalizeError(new Error("Opening in existing browser session.")), "CHROME_PROFILE_IN_USE");
   assert.equal(normalizeError(new Error("Falha desconhecida; senha=SUPER_SECRET")), "UNEXPECTED_ERROR");
 });

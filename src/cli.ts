@@ -114,10 +114,10 @@ try {
 } catch (error) {
   try {
     const record = await captureError(error, { stage: "runtime" });
-    console.error("Erro ao ler a pasta:", record.code, "-", record.description);
+    console.error(record.code === "CHROME_PROFILE_IN_USE" ? "Erro ao iniciar o Chrome:" : "Erro na execução:", record.code, "-", record.description);
   } catch {
     // A falha do registrador não deve resultar em falso sucesso.
-    console.error("Erro ao ler a pasta; falha adicional ao gravar log local.");
+    console.error("Erro na execução; falha adicional ao gravar log local.");
   }
   process.exitCode = 1;
 }

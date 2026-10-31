@@ -63,7 +63,7 @@ export async function startSocialBrowser(
     channel: "chrome",
     headless: false,
     viewport: null,
-    args: ["--start-maximized"],
+    args: ["--start-maximized", "--disable-background-mode"],
     ignoreDefaultArgs: ["--enable-automation"],
     acceptDownloads: false,
   });
