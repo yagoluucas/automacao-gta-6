@@ -19,6 +19,9 @@ LINK_YOUTUBE=https://www.youtube.com/
 
 **Atenção:** os links precisam ser URLs puras, sem `[...](...)` da formatação Markdown. `USER_INSTAGRAM`, `PASSWORD_INSTAGRAM` e equivalentes, mesmo que estejam no `.env.local`, **não são lidos nesta fase**. Nunca registre credenciais ou arquivos de sessão no Git.
 
+
+Se o terminal avisar `.env.local not found`, isso é apenas um aviso: o Node pode continuar usando `.env` ou os valores padrão. Se a pasta `PUBLICATIONS_DIR` não existir, a inspeção será ignorada com aviso claro, e o Chrome continuará aberto; nenhuma pasta será criada automaticamente. Crie a pasta ou ajuste o caminho real em `.env.local` para habilitar a inspeção. Erros de acesso a diretórios existentes continuam sendo reportados.
+
 O navegador usa o perfil próprio `.chrome-profile/`, ignorado pelo Git; ele não assume o controle do seu Chrome pessoal. Faça login manualmente se a rede solicitar. Evite iniciar dois bots simultaneamente usando o mesmo perfil. O programa continua aberto até você fechar a janela do Chrome. A maximização é solicitada via `--start-maximized` e pode depender do sistema operacional/gerenciador de janelas.
 
 `npm run dev` continua executando o leitor e mostrando o resumo no console após iniciar as abas. Caso uma página não carregue, o erro é listado por rede, mas as outras abas continuam acessíveis. Se o Chrome não estiver instalado, o processo falhará de forma explícita.
