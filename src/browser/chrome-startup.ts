@@ -43,7 +43,7 @@ export interface SocialBrowserSession {
 }
 
 /**
- * Uma janela real do Chrome em tela cheia, com perfil próprio do bot:
+ * Uma janela real do Chrome maximizada (sem F11), com perfil próprio do bot:
  * o Chrome pessoal do usuário nunca é controlado nem sobrescrito.
  *
  * O perfil é local e ignorado pelo Git, para preservar sessões feitas
@@ -61,7 +61,7 @@ export async function startSocialBrowser(
     channel: "chrome",
     headless: false,
     viewport: null,
-    args: ["--start-fullscreen"],
+    args: ["--start-maximized"],
     acceptDownloads: false,
   });
 
