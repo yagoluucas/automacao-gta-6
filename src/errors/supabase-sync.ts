@@ -1,4 +1,4 @@
-import type { ErrorRecord } from "./handler.ts";
+import type { ErrorRecord } from "./types.ts";
 import type { PublicationOutcome } from "../publication-contracts.ts";
 
 export type FailureSyncPayload = {
