@@ -35,7 +35,7 @@ function show(result: InspectionResult): void {
 
 try {
   const root = directoryFromArgs(process.argv.slice(2));
-  const session = process.env.BOT_OPEN_CHROME === "1" ? await startSocialBrowser() : null;
+  const session = process.argv.includes("--chrome") ? await startSocialBrowser() : null;
   if (session) {
     console.log("[CHROME] Chrome aberto em tela cheia: Instagram, TikTok e YouTube.");
     if (session.navigationFailures.length) {
