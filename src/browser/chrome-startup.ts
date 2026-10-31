@@ -1,6 +1,7 @@
 import path from "node:path";
 import { mkdir } from "node:fs/promises";
 import { chromium, type BrowserContext, type Page } from "playwright-core";
+import { closeChromeUsingBotProfile, waitForBotProfileRelease } from "./chrome-profile-process.ts";
 import type { Platform } from "../contracts.ts";
 
 export interface SocialLink {
@@ -58,13 +59,24 @@ export async function startSocialBrowser(
   const links = resolveSocialLinks(env);
   const profileDir = path.resolve(process.cwd(), ".chrome-profile");
   await mkdir(profileDir, { recursive: true, mode: 0o700 });
+  let closed: number[] = [];
+  try {
+    closed = await closeChromeUsingBotProfile(profileDir);
+  } catch {
+    // Se a consulta de processos não estiver disponível, o Playwright ainda
+    // tentará abrir o perfil e reportará CHROME_PROFILE_IN_USE se estiver ocupado.
+  }
+  if (closed.length) {
+    console.log("[CHROME] Sessão anterior do perfil do bot encerrada; abrindo uma nova janela.");
+    await waitForBotProfileRelease(profileDir, closed);
+  }
 
   const context = await chromium.launchPersistentContext(profileDir, {
     channel: "chrome",
     headless: false,
     viewport: null,
     args: ["--start-maximized", "--disable-background-mode"],
-    ignoreDefaultArgs: ["--enable-automation"],
+    ignoreDefaultArgs: ["--enable-automation", "--disable-extensions"],
     acceptDownloads: false,
   });
 

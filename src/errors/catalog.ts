@@ -18,7 +18,7 @@ export const ERROR_CATALOG = {
   PUBLICATIONS_DIR_MISSING: { kind: "warning", description: "Diretório local de publicações não encontrado; inspeção ignorada até que esteja disponível." },
   PUBLICATIONS_DIR_NOT_DIRECTORY: { kind: "fatal", description: "O caminho configurado para publicações não é uma pasta." },
   PUBLICATIONS_DIR_ACCESS_DENIED: { kind: "fatal", description: "Sem permissão para acessar o diretório local de publicações." },
-  CHROME_PROFILE_IN_USE: { kind: "fatal", description: "O Chrome do bot já está aberto com este perfil. Feche a janela anterior antes de executar npm run dev novamente." },
+  CHROME_PROFILE_IN_USE: { kind: "fatal", description: "Não foi possível liberar o perfil do Chrome do bot automaticamente. Feche a janela que usa .chrome-profile e tente novamente." },
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CATALOG;
