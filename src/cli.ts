@@ -5,11 +5,13 @@ import { captureError } from "./errors/handler.ts";
 import { AppError } from "./errors/catalog.ts";
 import { inspectRoot, type InspectionResult } from "./inspector.ts";
 import { findYouTubeShortDrafts, selectYouTubeShortDraft } from "./publication/youtube-short-drafts.ts";
+import { findInstagramDrafts, readInstagramDraft, selectInstagramDraft, type InstagramDraft } from "./publication/instagram-draft.ts";
+import { previewInstagram } from "./platforms/instagram/instagram-preview.ts";
 import { previewYouTubeShort, readYouTubePreviewConfig } from "./platforms/youtube/youtube-preview.ts";
 
 function directoryFromArgs(args: string[]): string {
   if (args.includes("--help") || args.includes("-h")) {
-    console.log("Uso: npm run dev -- --dir <pasta> (ou npm run inspect -- --dir <pasta>)\nPadrão: PUBLICATIONS_DIR ou ../publicacoes\nO modo dev carrega .env e .env.local automaticamente.\nEste comando NÃO publica em redes sociais.");
+    console.log("Uso: npm run dev -- --dir <pasta> (ou npm run preview:instagram -- --image-id <UUID>)\nPadrão: PUBLICATIONS_DIR ou ../publicacoes\nOs modos de prévia carregam .env e .env.local automaticamente.\nEste comando NÃO publica em redes sociais.");
     process.exit(0);
   }
   const idx = args.indexOf("--dir");
@@ -40,26 +42,42 @@ function show(result: InspectionResult): void {
 try {
   const root = directoryFromArgs(process.argv.slice(2));
   const youtubePreview = process.argv.includes("--youtube-preview");
-  if (youtubePreview && !process.argv.includes("--chrome")) {
-    throw new Error("Prévia do YouTube exige o modo Chrome.");
+  const instagramPreview = process.argv.includes("--instagram-preview");
+  const anyPreview = youtubePreview || instagramPreview;
+  const previewConfig = anyPreview ? readYouTubePreviewConfig(process.env) : undefined;
+  if (anyPreview && !process.argv.includes("--chrome")) {
+    throw new Error("Prévia de rede social exige o modo Chrome.");
   }
   const idIndex = process.argv.indexOf("--image-id");
   const imageId = idIndex < 0 ? undefined : process.argv[idIndex + 1];
-  if (youtubePreview && idIndex >= 0 && !imageId) throw new Error("Informe um UUID após --image-id.");
+  if (anyPreview && idIndex >= 0 && !imageId) throw new Error("Informe um UUID após --image-id.");
   const youtubeDrafts = youtubePreview ? await findYouTubeShortDrafts(root) : [];
   if (youtubePreview && youtubeDrafts.length === 0) {
     console.error("[YOUTUBE] Nenhum YOUTUBE.mp4 preparado em PUBLICATIONS_DIR/AAAA-MM-DD/<image_id>/.");
   }
-  const draft = youtubePreview ? selectYouTubeShortDraft(youtubeDrafts, imageId) : undefined;
-  const session = process.argv.includes("--chrome") ? await startSocialBrowser() : null;
+  const youtubeDraft = youtubePreview ? selectYouTubeShortDraft(youtubeDrafts, imageId) : undefined;
+  let instagramDraft: InstagramDraft | undefined;
+  if (instagramPreview) {
+    try {
+      instagramDraft = youtubeDraft
+        ? await readInstagramDraft(path.dirname(youtubeDraft.videoPath), youtubeDraft.imageId)
+        : selectInstagramDraft(await findInstagramDrafts(root, imageId), imageId);
+    } catch (error) {
+      console.error("[INSTAGRAM] Não foi possível preparar o trabalho:", error instanceof Error ? error.message : error);
+      if (!youtubePreview) throw error;
+      process.exitCode = 1;
+    }
+  }
+  const session = process.argv.includes("--chrome")
+    ? await startSocialBrowser(process.env, instagramPreview && !youtubePreview ? "instagram" : "youtube") : null;
   if (session) {
     console.log("[CHROME] Chrome aberto maximizado: Instagram, TikTok e YouTube.");
     if (session.navigationFailures.length) {
       console.warn("[CHROME] Abas com falha de carregamento:", session.navigationFailures.join(", "));
     }
   }
-  console.log(youtubePreview
-    ? `GTA 6 PIRA | Prévia YouTube | SEM PUBLICAR\nPasta: ${root}`
+  console.log(anyPreview
+    ? `GTA 6 PIRA | ${instagramPreview && youtubePreview ? "Prévia Instagram + YouTube" : instagramPreview ? "Prévia Instagram" : "Prévia YouTube"} | SEM PUBLICAR\nPasta: ${root}`
     : `GTA 6 PIRA | Leitor local V5 | MODO SOMENTE LEITURA\nPasta: ${root}`);
   let folderExists = true;
   try {
@@ -81,16 +99,28 @@ try {
       throw error;
     }
   }
-  if (youtubePreview) {
-    if (!session) throw new Error("Prévia do YouTube exige o modo Chrome.");
+  if (anyPreview) {
+    if (!session) throw new Error("Prévia exige o modo Chrome.");
     if (!folderExists) throw new Error("Diretório local não disponível para prévia.");
-    if (!draft) throw new Error("Nenhum vídeo selecionado para a prévia do YouTube.");
-    console.log("[YOUTUBE] Preparando rascunho para inspeção:", draft.publicationId);
-    const youtubeTab = session.tabs.get("youtube");
-    if (!youtubeTab) throw new Error("A aba do YouTube não foi aberta.");
-    await previewYouTubeShort(youtubeTab, draft, readYouTubePreviewConfig(process.env));
+    if (instagramDraft) {
+      try {
+        const instagramTab = session.tabs.get("instagram");
+        if (!instagramTab) throw new Error("A aba do Instagram não foi aberta.");
+        await previewInstagram(instagramTab, instagramDraft, previewConfig!.navigationTimeoutMs);
+      } catch (error) {
+        console.error("[INSTAGRAM] Prévia não concluída:", error instanceof Error ? error.message : error);
+        process.exitCode = 1;
+      }
+    }
+    if (youtubePreview) {
+      if (!youtubeDraft) throw new Error("Nenhum vídeo selecionado para a prévia do YouTube.");
+      console.log("[YOUTUBE] Preparando rascunho para inspeção:", youtubeDraft.publicationId);
+      const youtubeTab = session.tabs.get("youtube");
+      if (!youtubeTab) throw new Error("A aba do YouTube não foi aberta.");
+      await previewYouTubeShort(youtubeTab, youtubeDraft, previewConfig!);
+    }
   }
-  const results = folderExists && !youtubePreview ? await inspectRoot(root) : [];
+  const results = folderExists && !anyPreview ? await inspectRoot(root) : [];
   for (const result of results) {
     show(result);
     if (result.status === "ERROR") {
@@ -101,7 +131,7 @@ try {
       });
     }
   }
-  if (!youtubePreview) {
+  if (!anyPreview) {
     const count = (status: InspectionResult["status"]) => results.filter((r) => r.status === status).length;
     console.log(`\nResumo: ${count("OK")} válidos, ${count("PENDING")} aguardando, ${count("ERROR")} com erro (${results.length} trabalho(s)).`);
     if (!results.length) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
