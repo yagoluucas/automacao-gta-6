@@ -12,7 +12,7 @@ const job: InspectionResult = {
   jobDir: "/tmp/publicacoes/2026-10-23/" + imageId,
   status: "OK",
   manifest: {
-    schema_version: 1, image_id: imageId,
+    image_id: imageId,
     rule_set_code: "noticias", approach: "noticia",
     translate: false, zip_file: "publifeed_2310261200.zip",
     publications: [{id:publicationId,platform:"instagram",scheduled_at:"2026-10-23T15:00:00-03:00"}],

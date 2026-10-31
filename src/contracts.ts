@@ -8,7 +8,6 @@ export type Publication = {
 };
 
 export type Manifest = {
-  schema_version: 1;
   image_id: string;
   rule_set_code: string;
   approach: string;
@@ -19,19 +18,36 @@ export type Manifest = {
 
 export function parseManifest(input: unknown): Manifest {
   if (!isObject(input)) throw new Error("manifest.json precisa ser um objeto JSON");
-  if (input.schema_version !== 1) throw new Error("schema_version do manifest precisa ser 1");
+  let manifest: Record<string, unknown> = input;
+  if ("zip" in input || "publication_ids" in input || "platforms" in input) {
+    const platforms = input.platforms;
+    const publicationIds = input.publication_ids;
+    if (!Array.isArray(platforms) || !isObject(publicationIds)) {
+      throw new Error("platforms e publication_ids inválidos no manifest");
+    }
+    manifest = {
+      ...input,
+      zip_file: input.zip,
+      translate: input.translation,
+      publications: platforms.map((platform) => ({
+        id: publicationIds[String(platform)],
+        platform,
+        scheduled_at: input.scheduled_at,
+      })),
+    };
+  }
   for (const key of ["image_id", "rule_set_code", "approach", "zip_file"] as const) {
-    if (typeof input[key] !== "string" || !(input[key] as string).trim()) {
+    if (typeof manifest[key] !== "string" || !(manifest[key] as string).trim()) {
       throw new Error(`Campo obrigatório inválido em manifest.json: ${key}`);
     }
   }
-  if (typeof input.translate !== "boolean") throw new Error("translate precisa ser booleano");
-  if (!Array.isArray(input.publications) || !input.publications.length || input.publications.length > 3) {
+  if (typeof manifest.translate !== "boolean") throw new Error("translate precisa ser booleano");
+  if (!Array.isArray(manifest.publications) || !manifest.publications.length || manifest.publications.length > 3) {
     throw new Error("publications deve conter de 1 a 3 publicações");
   }
   const seen = new Set<Platform>();
   const publications: Publication[] = [];
-  for (const raw of input.publications) {
+  for (const raw of manifest.publications) {
     if (!isObject(raw) || typeof raw.id !== "string" || !raw.id.trim()) {
       throw new Error("Cada publicação precisa de um id não vazio");
     }
@@ -48,10 +64,17 @@ export function parseManifest(input: unknown): Manifest {
   if (new Set(scheduled).size !== 1) {
     throw new Error("As plataformas da mesma imagem precisam ter o mesmo horário agendado");
   }
-  if (!/^publifeed_\d{10}\.zip$/.test(input.zip_file as string)) {
+  if (!/^publifeed_\d{10}\.zip$/.test(manifest.zip_file as string)) {
     throw new Error("zip_file deve seguir publifeed_DDMMYYHHMM.zip");
   }
-  return input as Manifest;
+  return {
+    image_id: manifest.image_id as string,
+    rule_set_code: manifest.rule_set_code as string,
+    approach: manifest.approach as string,
+    translate: manifest.translate as boolean,
+    zip_file: manifest.zip_file as string,
+    publications,
+  };
 }
 
 export function parseReady(input: unknown): void {

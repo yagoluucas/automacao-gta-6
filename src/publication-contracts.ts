@@ -53,7 +53,7 @@ function validTime(value: unknown): value is string {
 /**
  * Adaptador do leitor existente para o novo contrato local.
  * Sem acesso à rede, sem alterar o ZIP, sem publicar e sem atualizar o Supabase.
- * Compatibilidade: apenas manifest.schema_version=1 / Feed V5.
+ * Compatibilidade: pacotes Feed V5 inspecionados.
  */
 export function preparedFromInspection(inspection: InspectionResult): PreparedPublication[] {
   if (inspection.status !== "OK" || !inspection.manifest || !inspection.outputs) {

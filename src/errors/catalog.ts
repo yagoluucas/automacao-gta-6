@@ -22,9 +22,12 @@ export type ErrorKind = (typeof ERROR_CATALOG)[ErrorCode]["kind"];
 export type ErrorStage = "inspection" | "preparation" | "publication" | "verification" | "database" | "runtime";
 
 export class AppError extends Error {
-  constructor(public readonly code: ErrorCode) {
+  readonly code: ErrorCode;
+
+  constructor(code: ErrorCode) {
     super(ERROR_CATALOG[code].description);
     this.name = "AppError";
+    this.code = code;
   }
 }
 
