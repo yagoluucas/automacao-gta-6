@@ -86,17 +86,14 @@ function createEntries(): [string, Buffer][] {
 }
 
 const manifest = {
-  schema_version: 1,
   image_id: imageId,
   rule_set_code: "noticias",
   approach: "noticia",
-  translate: false,
-  zip_file: "publifeed_2310261200.zip",
-  publications: [
-    { id: "id-ig", platform: "instagram", scheduled_at: "2026-10-23T15:00:00-03:00" },
-    { id: "id-yt", platform: "youtube", scheduled_at: "2026-10-23T15:00:00-03:00" },
-    { id: "id-tt", platform: "tiktok", scheduled_at: "2026-10-23T15:00:00-03:00" },
-  ],
+  translation: false,
+  zip: "publifeed_2310261200.zip",
+  scheduled_at: "2026-10-23T15:00:00-03:00",
+  platforms: ["instagram", "youtube", "tiktok"],
+  publication_ids: { instagram: "id-ig", youtube: "id-yt", tiktok: "id-tt" },
 };
 
 async function setupJob() {
@@ -105,7 +102,7 @@ async function setupJob() {
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, "manifest.json"), JSON.stringify(manifest));
   await writeFile(path.join(dir, "ready.json"), JSON.stringify({ ready: true }));
-  await writeFile(path.join(dir, manifest.zip_file), createZip(createEntries()));
+  await writeFile(path.join(dir, manifest.zip), createZip(createEntries()));
   return { root, dir };
 }
 
@@ -131,27 +128,27 @@ test("reprova legenda divergente ou ausente", async (t) => {
   const { root, dir } = await setupJob();
   t.after(() => rm(root, { recursive: true, force: true }));
   const entries = createEntries().filter(([name]) => name !== "LEGENDA_TIKTOK.txt");
-  await writeFile(path.join(dir, manifest.zip_file), createZip(entries));
+  await writeFile(path.join(dir, manifest.zip), createZip(entries));
   const result = await inspectJob(dir);
   assert.equal(result.status, "ERROR");
   assert.match(result.reason!, /Faltou/);
 });
 
-test("reprova diferentes horários de agendamento", async (t) => {
+test("reprova horário de agendamento sem fuso", async (t) => {
   const { root, dir } = await setupJob();
   t.after(() => rm(root, { recursive: true, force: true }));
   const changed = structuredClone(manifest);
-  changed.publications[1]!.scheduled_at = "2026-10-23T15:30:00-03:00";
+  changed.scheduled_at = "2026-10-23T15:30:00";
   await writeFile(path.join(dir, "manifest.json"), JSON.stringify(changed));
   const result = await inspectJob(dir);
   assert.equal(result.status, "ERROR");
-  assert.match(result.reason!, /mesmo horário/);
+  assert.match(result.reason!, /scheduled_at inválido/);
 });
 
 test("detecta adulteração do conteúdo comprimido pelo CRC", async (t) => {
   const { root, dir } = await setupJob();
   t.after(() => rm(root, { recursive: true, force: true }));
-  const file = path.join(dir, manifest.zip_file);
+  const file = path.join(dir, manifest.zip);
   const content = createZip(createEntries());
   const position = content.indexOf(Buffer.from("LEGENDAS.txt"));
   assert.ok(position !== -1);
@@ -163,6 +160,6 @@ test("detecta adulteração do conteúdo comprimido pelo CRC", async (t) => {
 test("não permite manifest com caminho de ZIP arbitrário", async (t) => {
   const { root, dir } = await setupJob();
   t.after(() => rm(root, { recursive: true, force: true }));
-  await writeFile(path.join(dir, "manifest.json"), JSON.stringify({ ...manifest, zip_file: "../../secret.zip" }));
+  await writeFile(path.join(dir, "manifest.json"), JSON.stringify({ ...manifest, zip: "../../secret.zip" }));
   assert.equal((await inspectJob(dir)).status, "ERROR");
 });
