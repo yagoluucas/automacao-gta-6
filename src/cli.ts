@@ -39,6 +39,18 @@ function show(result: InspectionResult): void {
 
 try {
   const root = directoryFromArgs(process.argv.slice(2));
+  const youtubePreview = process.argv.includes("--youtube-preview");
+  if (youtubePreview && !process.argv.includes("--chrome")) {
+    throw new Error("Prévia do YouTube exige o modo Chrome.");
+  }
+  const idIndex = process.argv.indexOf("--image-id");
+  const imageId = idIndex < 0 ? undefined : process.argv[idIndex + 1];
+  if (youtubePreview && idIndex >= 0 && !imageId) throw new Error("Informe um UUID após --image-id.");
+  const youtubeDrafts = youtubePreview ? await findYouTubeShortDrafts(root) : [];
+  if (youtubePreview && youtubeDrafts.length === 0) {
+    console.error("[YOUTUBE] Nenhum YOUTUBE.mp4 preparado em PUBLICATIONS_DIR/AAAA-MM-DD/<image_id>/.");
+  }
+  const draft = youtubePreview ? selectYouTubeShortDraft(youtubeDrafts, imageId) : undefined;
   const session = process.argv.includes("--chrome") ? await startSocialBrowser() : null;
   if (session) {
     console.log("[CHROME] Chrome aberto maximizado: Instagram, TikTok e YouTube.");
@@ -46,7 +58,9 @@ try {
       console.warn("[CHROME] Abas com falha de carregamento:", session.navigationFailures.join(", "));
     }
   }
-  console.log(`GTA 6 PIRA | Leitor local V5 | MODO SOMENTE LEITURA\nPasta: ${root}`);
+  console.log(youtubePreview
+    ? `GTA 6 PIRA | Prévia YouTube | SEM PUBLICAR\nPasta: ${root}`
+    : `GTA 6 PIRA | Leitor local V5 | MODO SOMENTE LEITURA\nPasta: ${root}`);
   let folderExists = true;
   try {
     const info = await stat(root);
@@ -67,16 +81,14 @@ try {
       throw error;
     }
   }
-  const youtubePreview = process.argv.includes("--youtube-preview");
   if (youtubePreview) {
     if (!session) throw new Error("Prévia do YouTube exige o modo Chrome.");
     if (!folderExists) throw new Error("Diretório local não disponível para prévia.");
-    const idIndex = process.argv.indexOf("--image-id");
-    const imageId = idIndex < 0 ? undefined : process.argv[idIndex + 1];
-    if (idIndex >= 0 && !imageId) throw new Error("Informe um UUID após --image-id.");
-    const draft = selectYouTubeShortDraft(await findYouTubeShortDrafts(root), imageId);
+    if (!draft) throw new Error("Nenhum vídeo selecionado para a prévia do YouTube.");
     console.log("[YOUTUBE] Preparando rascunho para inspeção:", draft.publicationId);
-    await previewYouTubeShort(session.context, draft, readYouTubePreviewConfig(process.env));
+    const youtubeTab = session.tabs.get("youtube");
+    if (!youtubeTab) throw new Error("A aba do YouTube não foi aberta.");
+    await previewYouTubeShort(youtubeTab, draft, readYouTubePreviewConfig(process.env));
   }
   const results = folderExists && !youtubePreview ? await inspectRoot(root) : [];
   for (const result of results) {
@@ -89,10 +101,12 @@ try {
       });
     }
   }
-  const count = (status: InspectionResult["status"]) => results.filter((r) => r.status === status).length;
-  console.log(`\nResumo: ${count("OK")} válidos, ${count("PENDING")} aguardando, ${count("ERROR")} com erro (${results.length} trabalho(s)).`);
-  if (!results.length && !youtubePreview) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
-  if (count("ERROR")) process.exitCode = 1;
+  if (!youtubePreview) {
+    const count = (status: InspectionResult["status"]) => results.filter((r) => r.status === status).length;
+    console.log(`\nResumo: ${count("OK")} válidos, ${count("PENDING")} aguardando, ${count("ERROR")} com erro (${results.length} trabalho(s)).`);
+    if (!results.length) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
+    if (count("ERROR")) process.exitCode = 1;
+  }
   if (session) {
     console.log("[CHROME] Feche a janela do Chrome para encerrar.");
     await new Promise<void>(resolve => session.context.once("close", () => resolve()));

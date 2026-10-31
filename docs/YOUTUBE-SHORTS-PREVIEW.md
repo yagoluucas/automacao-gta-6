@@ -6,10 +6,10 @@ Executar a partir da raiz do repositório:
 npm install
 npm run typecheck
 npm test
-npm run preview:youtube -- --image-id <UUID_DA_IMAGEM>
+npm run dev -- --image-id <UUID_DA_IMAGEM>
 ```
 
-`npm run dev` continua abrindo as três redes e inspecionando Feed V5. Apenas `preview:youtube` aciona este fluxo de teste; **não há confirmação de publicação e nenhum registro do Supabase é alterado**.
+`npm run dev` abre as três abas e executa o preview do YouTube em cada início. `npm run preview:youtube` é um alias do mesmo fluxo. Use `npm run inspect` para apenas inspecionar o pacote Feed V5. **Não há confirmação de publicação e nenhum registro do Supabase é alterado**. Cada execução do preview pode iniciar um novo upload, então evite repetir o comando sem necessidade.
 
 ## Contrato local do vídeo (provisório, separado do pacote Feed V5)
 
@@ -27,7 +27,7 @@ O manifesto deve conter `image_id`, `scheduled_at` em ISO 8601 com fuso e `publi
 
 ## Comportamento
 
-Abre Chrome com o perfil persistente da aplicação, acessa `studio.youtube.com`, tenta localizar o comando Criar/Enviar vídeos, seleciona o MP4 pelo campo de arquivo e preenche título e descrição. **Não clica em Próximo, Salvar ou Publicar**. A seleção pode iniciar upload e criar rascunhos privados no YouTube; não repita o teste de upload indiscriminadamente.
+Abre Chrome com o perfil persistente da aplicação e seleciona a aba do YouTube. Clica em Criar → Enviar vídeo, escolhe o MP4 local, preenche título e descrição, marca “Não é conteúdo para crianças”, avança pelas três etapas e seleciona “Público”. O seletor de Publicar é localizado para revisão, mas **não recebe clique**. A seleção do arquivo pode iniciar upload e criar um rascunho no YouTube; não repita o teste de upload indiscriminadamente.
 
 O YouTube Studio varia por idioma e versão. Caso os seletores não correspondam à interface atual, a execução interrompe e você poderá inspecionar a página manualmente; os seletores precisarão ser ajustados com um print/inspeção real da sua interface.
 
@@ -35,10 +35,9 @@ O YouTube Studio varia por idioma e versão. Caso os seletores não correspondam
 
 ```dotenv
 BOT_NAVIGATION_TIMEOUT_MS=30000
-BOT_UI_SETTLE_MS=2000
 ```
 
-Esses parâmetros permitem a interface estabilizar e completar carregamentos; não simulam comportamento humano nem garantem evitar mecanismos de detecção. O Playwright também aguarda os elementos ficarem disponíveis antes de interagir.
+Entre as interações do preview há uma pausa variável de 5 a 10 segundos para a interface estabilizar. O Playwright também aguarda os elementos ficarem disponíveis. A pausa não garante evitar mecanismos de detecção.
 
 ## Segurança
 

@@ -1,10 +1,10 @@
 # GTA 6 PIRA — Automação local (MVP 01)
 
-Este repositório começa com **somente leitura e logs no console**. Nenhum login, postagem, controle do navegador, interação com Supabase ou agendamento do processo local é executado nesta fase.
+Este repositório oferece inspeção local de pacotes Feed V5 e prévia de upload no YouTube. O preview pode enviar um MP4 e criar um rascunho, mas não clica em Publicar nem atualiza o Supabase.
 
-## MVP 02 — Abrir Google Chrome antes da inspeção
+## MVP 02 — Abrir Chrome e preparar o YouTube
 
-O comando `npm run dev` abre **uma janela nova do Google Chrome**, maximizada (sem F11), com três abas (Instagram, TikTok e YouTube), antes de ler a pasta de publicações. Não executa login, não preenche credenciais e não publica. Use `npm run inspect` para executar somente o leitor, sem navegador.
+O comando `npm run dev` abre **uma janela nova do Google Chrome**, maximizada (sem F11), com três abas (Instagram, TikTok e YouTube), deixando o YouTube em foco e preparando um upload de teste. Não executa login, não preenche credenciais e não clica em Publicar. Use `npm run inspect` para executar somente o leitor, sem navegador.
 
 Requisitos: Google Chrome instalado localmente e `npm install` para instalar `playwright-core` (não é necessário executar `playwright install`, pois o canal `chrome` usa o Chrome já instalado).
 
@@ -20,16 +20,16 @@ LINK_YOUTUBE=https://www.youtube.com/
 **Atenção:** os links precisam ser URLs puras, sem `[...](...)` da formatação Markdown. `USER_INSTAGRAM`, `PASSWORD_INSTAGRAM` e equivalentes, mesmo que estejam no `.env.local`, **não são lidos nesta fase**. Nunca registre credenciais ou arquivos de sessão no Git.
 
 
-Se o terminal avisar `.env.local not found`, isso é apenas um aviso: o Node pode continuar usando `.env` ou os valores padrão. Se a pasta `PUBLICATIONS_DIR` não existir, a inspeção será ignorada com aviso claro, e o Chrome continuará aberto; nenhuma pasta será criada automaticamente. Crie a pasta ou ajuste o caminho real em `.env.local` para habilitar a inspeção. Erros de acesso a diretórios existentes continuam sendo reportados.
+Se o terminal avisar `.env.local not found`, isso é apenas um aviso: o Node pode continuar usando `.env` ou os valores padrão. O preview exige uma pasta `PUBLICATIONS_DIR` existente com um `YOUTUBE.mp4` preparado; se não encontrar o vídeo, termina antes de abrir o Chrome.
 
 O navegador usa o perfil próprio `.chrome-profile/`, ignorado pelo Git; ele não assume o controle do seu Chrome pessoal. Faça login manualmente se a rede solicitar. Evite iniciar dois bots simultaneamente usando o mesmo perfil. O programa continua aberto até você fechar a janela do Chrome. A maximização é solicitada via `--start-maximized` e pode depender do sistema operacional/gerenciador de janelas.
 
-`npm run dev` continua executando o leitor e mostrando o resumo no console após iniciar as abas. Caso uma página não carregue, o erro é listado por rede, mas as outras abas continuam acessíveis. Se o Chrome não estiver instalado, o processo falhará de forma explícita.
+`npm run dev` executa o preview do YouTube; consulte [docs/YOUTUBE-SHORTS-PREVIEW.md](docs/YOUTUBE-SHORTS-PREVIEW.md) para o formato do vídeo local. Cada execução pode iniciar um novo upload. Para mostrar apenas o resumo do leitor, use `npm run inspect`. Caso uma página não carregue, o erro é listado por rede. Se o Chrome não estiver instalado, o processo falhará de forma explícita.
 
 ## Requisitos
 
 - Windows com **Node.js 22.16+** (suporte nativo à execução de TypeScript por remoção de tipos).
-- Os pacotes ZIP produzidos pelo **plugin GTA 6 PIRA Feed V5** devem estar na pasta `publicacoes`.
+- O preview do YouTube exige `YOUTUBE.mp4` e `LEGENDA_YOUTUBE.txt` na pasta do trabalho. A inspeção Feed V5 lê os pacotes ZIP na pasta `publicacoes`.
 - A execução do modo navegador utiliza a dependência `playwright-core` e uma instalação local do Google Chrome. Não faz download automático do Chromium.
 
 ## Executar
@@ -73,9 +73,9 @@ npm run inspect
 npm run inspect -- --dir "D:\\programacao\\projetos\\bot-publicacao-gta\\publicacoes"
 ```
 
-`npm run inspect` usa o ambiente já definido no terminal, mas não carrega os arquivos `.env` e `.env.local` automaticamente. **Ambos os comandos apenas inspecionam pacotes locais; não publicam nas redes sociais e não consultam o Supabase.**
+`npm run inspect` usa o ambiente já definido no terminal, mas não carrega os arquivos `.env` e `.env.local` automaticamente. `npm run dev` prepara o upload do YouTube sem clicar em Publicar; `npm run inspect` apenas lê pacotes locais. Nenhum deles atualiza o Supabase.
 
-## O que será mostrado no console
+## O que o leitor `npm run inspect` mostra no console
 
 Para cada pasta com `ready.json`:
 

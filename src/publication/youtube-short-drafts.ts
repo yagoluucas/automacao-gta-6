@@ -51,7 +51,7 @@ export async function findYouTubeShortDrafts(root: string): Promise<YouTubeShort
       if (!publicationId) continue;
       if (!isValidUuid(publicationId)) throw new Error("ID da publicação YouTube inválido");
       const scheduledAt = id && typeof id === "object" && "scheduled_at" in id ? id.scheduled_at : manifest.scheduled_at;
-      if (typeof scheduledAt !== "string" || !/[zZ]|[+-]\\d{2}:\\d{2}$/.test(scheduledAt) ||
+      if (typeof scheduledAt !== "string" || !/(?:[zZ]|[+-]\d{2}:\d{2})$/.test(scheduledAt) ||
           !Number.isFinite(Date.parse(scheduledAt))) throw new Error("scheduled_at YouTube inválido");
 
       const captionPath = path.join(dir, "LEGENDA_YOUTUBE.txt");

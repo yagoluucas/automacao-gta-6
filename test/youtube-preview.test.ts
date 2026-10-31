@@ -3,8 +3,9 @@ import {test} from "node:test";
 import {mkdtemp, mkdir, writeFile, rm} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { Page } from "playwright-core";
 import {findYouTubeShortDrafts, selectYouTubeShortDraft} from "../src/publication/youtube-short-drafts.ts";
-import {readYouTubePreviewConfig} from "../src/platforms/youtube/youtube-preview.ts";
+import {previewYouTubeShort, readYouTubePreviewConfig} from "../src/platforms/youtube/youtube-preview.ts";
 
 const imageId="11111111-1111-4111-8111-111111111111";
 const publicationId="22222222-2222-4222-8222-222222222222";
@@ -31,6 +32,52 @@ test("falha diante de várias postagens sem seleção explícita",()=>{
  assert.throws(()=>selectYouTubeShortDraft([d,d]),/vários Shorts/);
 });
 test("configuração de espera exige valores válidos",()=>{
- assert.deepEqual(readYouTubePreviewConfig({}),{navigationTimeoutMs:30000,uiSettleMs:2000});
- assert.throws(()=>readYouTubePreviewConfig({BOT_UI_SETTLE_MS:"-1"}),/BOT_UI_SETTLE_MS/);
+ assert.deepEqual(readYouTubePreviewConfig({}),{navigationTimeoutMs:30000});
+ assert.throws(()=>readYouTubePreviewConfig({BOT_NAVIGATION_TIMEOUT_MS:"-1"}),/BOT_NAVIGATION_TIMEOUT_MS/);
+});
+
+test("percorre o upload na aba do YouTube e para antes de publicar", async () => {
+ const actions: string[] = [];
+ const control = (name: string) => ({
+  first() { return this; },
+  async waitFor() { actions.push(`wait:${name}`); },
+  async click() { actions.push(`click:${name}`); },
+  async fill(value: string) { actions.push(`fill:${name}:${value}`); },
+ });
+ const studioPage = {
+  async bringToFront() { actions.push("focus:studio"); },
+  async waitForURL() { actions.push("url:studio"); },
+  async waitForTimeout(ms: number) { assert.ok(ms >= 5000 && ms <= 10000); actions.push("pause"); },
+  getByRole(_role: string, options: {name: RegExp}) {
+   return control(options.name.test("Selecionar arquivos") ? "select-files" :
+    options.name.test("Avançar") ? "next" : "publish");
+  },
+  locator(selector: string) {
+   return control(selector.includes("VIDEO_MADE_FOR_KIDS_NOT_MFK") ? "not-for-kids" :
+    selector.includes('name="PUBLIC"') ? "public" :
+    selector.includes("video-title") ? "title" : "description");
+  },
+  async waitForEvent() { return { async setFiles(file: string) { actions.push(`file:${file}`); } }; },
+ } as unknown as Page;
+ const youtubePage = {
+  async bringToFront() { actions.push("focus:youtube"); },
+  async waitForTimeout(ms: number) { assert.ok(ms >= 5000 && ms <= 10000); actions.push("pause"); },
+  getByRole() { return control("create"); },
+  getByText() { return control("upload"); },
+  async waitForEvent() { return studioPage; },
+  waitForURL() { return new Promise<void>(() => {}); },
+ } as unknown as Page;
+ const draft = {
+  imageId, publicationId, scheduledAt: "2026-10-31T15:00:00-03:00",
+  videoPath: "C:/video/YOUTUBE.mp4", caption: "Meu Short\n#gta6", title: "Meu Short",
+ };
+ const result = await previewYouTubeShort(youtubePage, draft, {navigationTimeoutMs:30000});
+ assert.equal(result, studioPage);
+ assert.equal(actions[0], "focus:youtube");
+ assert.equal(actions.filter(action => action === "click:next").length, 3);
+ assert.ok(actions.indexOf("click:public") > actions.lastIndexOf("click:next"));
+ assert.ok(actions.includes("wait:publish"));
+ assert.ok(!actions.includes("click:publish"));
+ assert.equal(actions.filter(action => action === "pause").length,
+  actions.filter(action => /^(focus:|click:|fill:|file:)/.test(action)).length);
 });

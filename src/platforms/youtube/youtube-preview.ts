@@ -1,60 +1,88 @@
-import type { BrowserContext, Page } from "playwright-core";
+import type { Page } from "playwright-core";
+import { pauseAfterInteraction } from "../../browser/interaction-delay.ts";
 import type { YouTubeShortDraft } from "../../publication/youtube-short-drafts.ts";
 
 export type YouTubePreviewConfig = {
   navigationTimeoutMs: number;
-  uiSettleMs: number;
 };
 
 export function readYouTubePreviewConfig(env: NodeJS.ProcessEnv): YouTubePreviewConfig {
-  const parse = (name: string, defaultValue: number, max: number) => {
-    const raw = env[name];
-    if (raw === undefined || raw.trim() === "") return defaultValue;
-    const value = Number(raw);
-    if (!Number.isSafeInteger(value) || value < 0 || value > max) throw new Error(name + " deve ser um inteiro entre 0 e " + max);
-    return value;
-  };
-  return {
-    navigationTimeoutMs: parse("BOT_NAVIGATION_TIMEOUT_MS", 30000, 120000),
-    uiSettleMs: parse("BOT_UI_SETTLE_MS", 2000, 15000),
-  };
+  const raw = env.BOT_NAVIGATION_TIMEOUT_MS;
+  if (raw === undefined || raw.trim() === "") return { navigationTimeoutMs: 30000 };
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value) || value < 1000 || value > 120000) {
+    throw new Error("BOT_NAVIGATION_TIMEOUT_MS deve ser um inteiro entre 1000 e 120000");
+  }
+  return { navigationTimeoutMs: value };
 }
 
 /**
- * Prepara exclusivamente um rascunho do YouTube Studio para inspeção humana.
- * Pode iniciar upload e criar um rascunho privado, mas NUNCA clica em
- * Próximo, Salvar ou Publicar. Não faz login, nem contorna verificações.
+ * Prepara o upload na aba do YouTube criada pela sessão do bot.
+ * Seleciona Público, mas não aciona o botão Publicar.
  */
 export async function previewYouTubeShort(
-  context: BrowserContext,
+  youtubePage: Page,
   draft: YouTubeShortDraft,
   config: YouTubePreviewConfig,
 ): Promise<Page> {
-  const page = context.pages().find(p => {
-    try { return new URL(p.url()).hostname.endsWith(".youtube.com"); }
-    catch { return false; }
-  }) ?? await context.newPage();
-  await page.goto("https://studio.youtube.com/", {waitUntil:"domcontentloaded",timeout:config.navigationTimeoutMs});
-  await page.bringToFront();
-  const fileInput = page.locator('input[type="file"][accept*="video"], input[type="file"]');
-  const create = page.getByRole("button", {name: /criar|create/i}).first();
-  if (await create.isVisible({timeout:5000}).catch(()=>false)) {
-    await create.click();
-    const upload = page.getByText(/enviar vídeos|upload videos/i).first();
-    if (await upload.isVisible({timeout:5000}).catch(()=>false)) await upload.click();
-  }
-  await fileInput.first().waitFor({state:"attached",timeout:config.navigationTimeoutMs});
-  await fileInput.first().setInputFiles(draft.videoPath);
-  await page.waitForTimeout(config.uiSettleMs);
+  const timeout = config.navigationTimeoutMs;
+  await youtubePage.bringToFront();
+  console.log("[YOUTUBE] Aba do YouTube selecionada.");
+  await pauseAfterInteraction(youtubePage);
 
-  // YouTube Studio usa campos contenteditable para título e descrição.
-  // Não avançar se a estrutura variar: falhar de modo seguro.
-  const title = page.locator('ytcp-social-suggestions-textbox#title-textarea #textbox[contenteditable="true"], ytcp-video-metadata-editor #title-textarea #textbox[contenteditable="true"]').first();
-  const description = page.locator('ytcp-social-suggestions-textbox#description-textarea #textbox[contenteditable="true"], ytcp-video-metadata-editor #description-textarea #textbox[contenteditable="true"]').first();
-  await title.waitFor({state:"visible",timeout:config.navigationTimeoutMs});
-  await title.fill(draft.title);
-  await description.waitFor({state:"visible",timeout:config.navigationTimeoutMs});
-  await description.fill(draft.caption);
-  console.log("[YOUTUBE] Arquivo e texto preparados para revisão manual. Nenhuma publicação confirmada.");
-  return page;
+  const create = youtubePage.getByRole("button", { name: /^(Criar|Create)$/i }).first();
+  await create.click({ timeout });
+  await pauseAfterInteraction(youtubePage);
+
+  const upload = youtubePage.getByText(/^(Enviar vídeo|Enviar vídeos|Upload video|Upload videos)$/i).first();
+  await upload.waitFor({ state: "visible", timeout });
+  const studioDestination = Promise.any([
+    youtubePage.waitForEvent("popup", { timeout }),
+    youtubePage.waitForURL(/^https:\/\/studio\.youtube\.com\//, { timeout }).then(() => youtubePage),
+  ]);
+  await upload.click({ timeout });
+  const studioPage = await studioDestination;
+  await pauseAfterInteraction(youtubePage);
+  await studioPage.waitForURL(/^https:\/\/studio\.youtube\.com\//, { timeout });
+  await studioPage.bringToFront();
+  console.log("[YOUTUBE] Envio de vídeo aberto no Studio.");
+  await pauseAfterInteraction(studioPage);
+
+  const selectFiles = studioPage.getByRole("button", { name: /^(Selecionar arquivos|Select files)$/i }).first();
+  await selectFiles.waitFor({ state: "visible", timeout });
+  const fileChooser = studioPage.waitForEvent("filechooser", { timeout });
+  await selectFiles.click({ timeout });
+  await pauseAfterInteraction(studioPage);
+  await (await fileChooser).setFiles(draft.videoPath);
+  console.log("[YOUTUBE] Arquivo MP4 selecionado.");
+  await pauseAfterInteraction(studioPage);
+
+  const title = studioPage.locator('ytcp-video-title #textbox[contenteditable="true"], #title-textarea #textbox[contenteditable="true"]').first();
+  const description = studioPage.locator('ytcp-video-description #textbox[contenteditable="true"], #description-textarea #textbox[contenteditable="true"]').first();
+  await title.waitFor({ state: "visible", timeout });
+  await title.fill(draft.title, { timeout });
+  await pauseAfterInteraction(studioPage);
+  await description.waitFor({ state: "visible", timeout });
+  await description.fill(draft.caption, { timeout });
+  await pauseAfterInteraction(studioPage);
+
+  const notForKids = studioPage.locator('tp-yt-paper-radio-button[name="VIDEO_MADE_FOR_KIDS_NOT_MFK"]');
+  await notForKids.click({ timeout });
+  console.log("[YOUTUBE] Título, descrição e audiência preenchidos.");
+  await pauseAfterInteraction(studioPage);
+
+  const next = studioPage.getByRole("button", { name: /^(Avançar|Next)$/i }).first();
+  for (let step = 0; step < 3; step++) {
+    await next.click({ timeout });
+    await pauseAfterInteraction(studioPage);
+  }
+
+  const publicVisibility = studioPage.locator('tp-yt-paper-radio-button[name="PUBLIC"]');
+  await publicVisibility.click({ timeout });
+  await pauseAfterInteraction(studioPage);
+
+  const publish = studioPage.getByRole("button", { name: /^(Publicar|Publish)$/i }).first();
+  await publish.waitFor({ state: "visible", timeout });
+  console.log("[YOUTUBE] Público selecionado. Botão Publicar localizado para revisão manual; nenhum clique foi feito.");
+  return studioPage;
 }

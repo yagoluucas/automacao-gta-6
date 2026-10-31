@@ -1,6 +1,6 @@
 import path from "node:path";
 import { mkdir } from "node:fs/promises";
-import { chromium, type BrowserContext } from "playwright-core";
+import { chromium, type BrowserContext, type Page } from "playwright-core";
 import type { Platform } from "../contracts.ts";
 
 export interface SocialLink {
@@ -39,6 +39,7 @@ export function resolveSocialLinks(env: NodeJS.ProcessEnv): SocialLink[] {
 
 export interface SocialBrowserSession {
   readonly context: BrowserContext;
+  readonly tabs: ReadonlyMap<Platform, Page>;
   readonly navigationFailures: readonly Platform[];
 }
 
@@ -51,6 +52,7 @@ export interface SocialBrowserSession {
  */
 export async function startSocialBrowser(
   env: NodeJS.ProcessEnv = process.env,
+  activePlatform: Platform = "youtube",
 ): Promise<SocialBrowserSession> {
   // Validar os três destinos ANTES de abrir uma janela.
   const links = resolveSocialLinks(env);
@@ -62,14 +64,18 @@ export async function startSocialBrowser(
     headless: false,
     viewport: null,
     args: ["--start-maximized"],
+    ignoreDefaultArgs: ["--enable-automation"],
     acceptDownloads: false,
   });
 
   try {
     const blank = context.pages().find(page => page.url() === "about:blank");
     const tabs = [];
+    const tabsByPlatform = new Map<Platform, Page>();
     for (const [index] of links.entries()) {
-      tabs.push(index === 0 && blank ? blank : await context.newPage());
+      const page = index === 0 && blank ? blank : await context.newPage();
+      tabs.push(page);
+      tabsByPlatform.set(links[index]!.platform, page);
     }
     const outcomes = await Promise.allSettled(
       tabs.map((page, index) => page!.goto(links[index]!.url, {
@@ -77,9 +83,10 @@ export async function startSocialBrowser(
         timeout: 25_000,
       })),
     );
-    await tabs[0]!.bringToFront();
+    await tabsByPlatform.get(activePlatform)!.bringToFront();
     return {
       context,
+      tabs: tabsByPlatform,
       navigationFailures: outcomes.flatMap((result, index) =>
         result.status === "rejected" ? [links[index]!.platform] : []),
     };
