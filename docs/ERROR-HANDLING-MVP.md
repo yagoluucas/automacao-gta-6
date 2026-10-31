@@ -18,7 +18,9 @@ O retry é destinado **somente a passos comprovadamente repetíveis**, como prep
 ## Arquivos
 
 - `src/errors/catalog.ts`: tipos, catálogo e normalização de exceções.
-- `src/errors/handler.ts`: `makeErrorRecord`, `captureError` e escrita de um JSON por ocorrência em `logs/errors`.
+- `src/errors/handler.ts`: exporta apenas `captureError`; criação do registro e gravação JSON ficam privadas.
+- `src/errors/types.ts`: tipos compartilhados entre captura, retry e sincronização.
+- `src/ids.ts`: validação centralizada dos UUIDs também usada pelo contrato de publicação.
 - `src/errors/retry.ts`: `withPublicationRetry`; espera injetável nos testes e callback `onFinal`.
 - `src/errors/supabase-sync.ts`: `FailureSyncPayload` e conversão para o contrato de resultado existente. **Não envia requisições.**
 - `src/cli.ts`: falhas da inspeção e exceções da CLI geram registros locais; sem mudança da validação atual.
