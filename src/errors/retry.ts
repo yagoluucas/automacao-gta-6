@@ -1,5 +1,6 @@
 import { AppError } from "./catalog.ts";
-import { captureError, createJsonErrorRecorder, type ErrorContext, type ErrorRecorder, type ErrorRecord } from "./handler.ts";
+import { captureError } from "./handler.ts";
+import type { ErrorContext, ErrorRecorder, ErrorRecord } from "./types.ts";
 
 /** Agendamento de 3 tentativas: imediato, +5 min, +10 min. */
 export const RETRY_DELAYS_MS = [5 * 60_000, 10 * 60_000] as const;
@@ -29,7 +30,6 @@ export async function withPublicationRetry<T>(
   context: ErrorContext,
   options: RetryOptions = {},
 ): Promise<RetryResult<T>> {
-  const recorder = options.recorder ?? createJsonErrorRecorder();
   const wait = options.wait ?? defaultWait;
   const maxAttempts = options.maxAttempts ?? 3;
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 3) {
@@ -40,8 +40,8 @@ export async function withPublicationRetry<T>(
       return { status: "success", value: await action(), attempts: attempt };
     } catch (error) {
       const delay = RETRY_DELAYS_MS[attempt - 1] ?? 0;
-      const record = await captureError(error, context, recorder, {
-        attempt, maxAttempts, retryDelayMs: delay,
+      const record = await captureError(error, context, {
+        recorder: options.recorder, attempt, maxAttempts, retryDelayMs: delay,
       });
       if (record.action === "retry") {
         await wait(delay);
