@@ -1,4 +1,5 @@
 import path from "node:path";
+import { captureError } from "./errors/handler.ts";
 import { inspectRoot, type InspectionResult } from "./inspector.ts";
 
 function directoryFromArgs(args: string[]): string {
@@ -35,12 +36,27 @@ try {
   const root = directoryFromArgs(process.argv.slice(2));
   console.log(`GTA 6 PIRA | Leitor local V5 | MODO SOMENTE LEITURA\nPasta: ${root}`);
   const results = await inspectRoot(root);
-  for (const result of results) show(result);
+  for (const result of results) {
+    show(result);
+    if (result.status === "ERROR") {
+      await captureError(result.reason ?? "Falha desconhecida na inspeção", {
+        stage: "inspection",
+        imageId: path.basename(result.jobDir),
+        // Sem ID confiável da publicação: não inventar destino nem sincronizar com Supabase.
+      });
+    }
+  }
   const count = (status: InspectionResult["status"]) => results.filter((r) => r.status === status).length;
   console.log(`\nResumo: ${count("OK")} válidos, ${count("PENDING")} aguardando, ${count("ERROR")} com erro (${results.length} trabalho(s)).`);
   if (!results.length) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
   if (count("ERROR")) process.exitCode = 1;
 } catch (error) {
-  console.error("Erro ao ler a pasta:", error instanceof Error ? error.message : error);
+  try {
+    const record = await captureError(error, { stage: "runtime" });
+    console.error("Erro ao ler a pasta:", record.code, "-", record.description);
+  } catch {
+    // A falha do registrador não deve resultar em falso sucesso.
+    console.error("Erro ao ler a pasta; falha adicional ao gravar log local.");
+  }
   process.exitCode = 1;
 }

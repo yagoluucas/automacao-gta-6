@@ -1,5 +1,6 @@
 import path from "node:path";
 import { PLATFORMS, type Platform } from "./contracts.ts";
+import { isValidUuid } from "./ids.ts";
 import type { InspectionResult } from "./inspector.ts";
 
 /**
@@ -37,14 +38,9 @@ export type PreparedPublication =
   | (LocalPublication & { mediaType: "video"; assets: readonly [PublicationAsset] })
   | (LocalPublication & { mediaType: "carousel"; assets: readonly [PublicationAsset, PublicationAsset, ...PublicationAsset[]] });
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256 = /^[a-f0-9]{64}$/i;
 const ISO_WITH_OFFSET = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 const MAX_ERROR_LENGTH = 1000;
-
-function validId(value: unknown): value is string {
-  return typeof value === "string" && UUID.test(value);
-}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -64,12 +60,12 @@ export function preparedFromInspection(inspection: InspectionResult): PreparedPu
     throw new Error("Apenas pacotes inspecionados com status OK podem ser preparados");
   }
   const { manifest, outputs } = inspection;
-  if (!validId(manifest.image_id)) throw new Error("image_id não é um UUID do Supabase");
+  if (!isValidUuid(manifest.image_id)) throw new Error("image_id não é um UUID do Supabase");
   if (outputs.length !== manifest.publications.length) throw new Error("Número de saídas não corresponde ao manifesto");
 
   const seen = new Set<string>();
   return manifest.publications.map((publication): PreparedPublication => {
-    if (!validId(publication.id)) throw new Error("publications[].id não é um UUID do Supabase");
+    if (!isValidUuid(publication.id)) throw new Error("publications[].id não é um UUID do Supabase");
     if (seen.has(publication.id)) throw new Error("ID de publicação duplicado no manifesto");
     seen.add(publication.id);
 
@@ -141,7 +137,7 @@ function validPostUrl(value: unknown, platform: Platform): value is string {
 
 /** Validação de runtime: TypeScript não valida JSON recebido de outros processos. */
 export function parsePublicationOutcome(input: unknown): PublicationOutcome {
-  if (!isObject(input) || !validId(input.imageId) || !validId(input.publicationId) ||
+  if (!isObject(input) || !isValidUuid(input.imageId) || !isValidUuid(input.publicationId) ||
       !PLATFORMS.includes(input.platform as Platform)) {
     throw new Error("Identificadores ou plataforma inválidos no resultado de publicação");
   }

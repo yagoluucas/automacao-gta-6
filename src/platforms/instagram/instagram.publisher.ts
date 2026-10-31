@@ -1,0 +1,47 @@
+import type { MediaType } from "../../publication-contracts.ts";
+import {
+  PlatformStepNotImplementedError,
+  type LocalUploadMedia,
+  type MusicOptions,
+  type MusicResult,
+  type PublicationPreparation,
+  type PublicationVerification,
+  type SocialPublisher,
+} from "../social-publisher.interface.ts";
+
+/** Instagram: esqueleto sem navegação, publicação ou acesso ao Supabase. */
+export class InstagramPublisher implements SocialPublisher {
+  readonly platform = "instagram" as const;
+
+  async prepare(_input: PublicationPreparation): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "prepare");
+  }
+
+  async publish(): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "publish");
+  }
+
+  async verifyPublication(): Promise<PublicationVerification> {
+    throw new PlatformStepNotImplementedError(this.platform, "verifyPublication");
+  }
+
+  async openTab(): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "openTab");
+  }
+
+  async openComposer(_mediaType: MediaType): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "openComposer");
+  }
+
+  async uploadMedia(_files: readonly LocalUploadMedia[]): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "uploadMedia");
+  }
+
+  async setCaption(_caption: string): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "setCaption");
+  }
+
+  async closeTab(): Promise<void> {
+    throw new PlatformStepNotImplementedError(this.platform, "closeTab");
+  }
+}
