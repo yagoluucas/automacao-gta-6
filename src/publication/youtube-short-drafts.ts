@@ -1,4 +1,4 @@
-import { open, readFile, readdir, lstat, stat } from "node:fs/promises";
+import { open, readFile, readdir, lstat } from "node:fs/promises";
 import path from "node:path";
 import { parseManifest, parseReady } from "../contracts.ts";
 import { isValidUuid } from "../ids.ts";
