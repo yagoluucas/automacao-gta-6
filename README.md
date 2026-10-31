@@ -1,10 +1,10 @@
 # GTA 6 PIRA — Automação local (MVP 01)
 
-Este repositório oferece inspeção local de pacotes Feed V5 e prévia de upload no Instagram e no YouTube. O preview pode enviar mídias e criar rascunhos, mas não clica em Publicar nem atualiza o Supabase.
+Este repositório oferece inspeção local de pacotes Feed V5 e prévia de upload no TikTok, YouTube e Instagram. O preview pode enviar mídias e criar rascunhos, mas não clica em Publicar nem atualiza o Supabase.
 
-## MVP 02 — Abrir Chrome e preparar Instagram e YouTube
+## MVP 02 — Abrir Chrome e preparar TikTok, YouTube e Instagram
 
-O comando `npm run dev` abre **uma janela nova do Google Chrome**, maximizada (sem F11), com três abas (Instagram, TikTok e YouTube). Primeiro prepara a mídia e a legenda do Instagram no Post assistant da extensão INSSIST, sem clicar em Publish Photo/Video; deixa essa aba aberta e depois prepara o upload do YouTube, também sem publicar. A aba do YouTube fica em foco ao final. Não executa login nem preenche credenciais. Use `npm run preview:instagram` ou `npm run preview:youtube` para testar uma rede por vez; `npm run inspect` executa somente o leitor, sem navegador.
+O comando `npm run dev` abre **uma janela nova do Google Chrome**, maximizada (sem F11), com três abas (Instagram, TikTok e YouTube). Prepara primeiro o TikTok, depois o YouTube e por fim o Instagram, deixando as telas abertas para revisão. Nenhum botão final de publicação recebe clique. A aba do Instagram fica em foco ao final. Não executa login nem preenche credenciais. Use `npm run preview:tiktok`, `npm run preview:youtube` ou `npm run preview:instagram` para testar uma rede por vez; `npm run inspect` executa somente o leitor, sem navegador.
 
 Requisitos: Google Chrome instalado localmente e `npm install` para instalar `playwright-core` (não é necessário executar `playwright install`, pois o canal `chrome` usa o Chrome já instalado).
 
@@ -20,16 +20,16 @@ LINK_YOUTUBE=https://www.youtube.com/
 **Atenção:** os links precisam ser URLs puras, sem `[...](...)` da formatação Markdown. `USER_INSTAGRAM`, `PASSWORD_INSTAGRAM` e equivalentes, mesmo que estejam no `.env.local`, **não são lidos nesta fase**. Nunca registre credenciais ou arquivos de sessão no Git.
 
 
-Se o terminal avisar `.env.local not found`, isso é apenas um aviso: o Node pode continuar usando `.env` ou os valores padrão. O preview exige uma pasta `PUBLICATIONS_DIR` existente com um `YOUTUBE.mp4` preparado; se não encontrar o vídeo, termina antes de abrir o Chrome.
+Se o terminal avisar `.env.local not found`, isso é apenas um aviso: o Node pode continuar usando `.env` ou os valores padrão. `npm run dev` e `preview:youtube` exigem uma pasta `PUBLICATIONS_DIR` existente com um `YOUTUBE.mp4` preparado; os comandos isolados de TikTok e Instagram usam apenas as mídias correspondentes.
 
 O navegador usa o perfil próprio `.chrome-profile/`, ignorado pelo Git; ele não assume o controle do seu Chrome pessoal. Faça login manualmente se a rede solicitar. No Windows, se esse perfil já estiver aberto, `npm run dev` encerra somente o Chrome que usa exatamente esse perfil e abre outra janela com o mesmo login e as extensões instaladas. Uma janela aberta diretamente pelo PowerShell sem depuração remota não pode ser assumida pelo Playwright. Evite iniciar dois bots simultaneamente usando o mesmo perfil, pois a nova execução fecha a janela anterior e pode interromper um rascunho em andamento. O Chrome é iniciado com o modo de aplicativos em segundo plano desativado para liberar o perfil após fechar a janela. Se aparecer `CHROME_PROFILE_IN_USE`, encerre manualmente o Chrome do bot que ainda esteja em execução; não apague a pasta do perfil, pois ela guarda a sessão. O programa continua aberto até você fechar a janela do Chrome. A maximização é solicitada via `--start-maximized` e pode depender do sistema operacional/gerenciador de janelas.
 
-`npm run dev` executa Instagram e depois YouTube com pausas de 5 a 10 segundos entre interações; consulte [docs/INSTAGRAM-PREVIEW.md](docs/INSTAGRAM-PREVIEW.md) e [docs/YOUTUBE-SHORTS-PREVIEW.md](docs/YOUTUBE-SHORTS-PREVIEW.md) para o formato das mídias locais. Cada execução pode iniciar novos uploads. Se a preparação do Instagram falhar, o erro é exibido e o fluxo do YouTube ainda é tentado. Para mostrar apenas o resumo do leitor, use `npm run inspect`. Caso uma página não carregue, o erro é listado por rede. Se o Chrome não estiver instalado, o processo falhará de forma explícita.
+`npm run dev` executa TikTok → YouTube → Instagram com pausas de 5 a 10 segundos entre interações; consulte [docs/TIKTOK-PREVIEW.md](docs/TIKTOK-PREVIEW.md), [docs/YOUTUBE-SHORTS-PREVIEW.md](docs/YOUTUBE-SHORTS-PREVIEW.md) e [docs/INSTAGRAM-PREVIEW.md](docs/INSTAGRAM-PREVIEW.md) para o formato das mídias locais. Cada execução pode iniciar novos uploads. Se uma prévia falhar após abrir o navegador, o erro é exibido e a próxima rede ainda é tentada. Para mostrar apenas o resumo do leitor, use `npm run inspect`. Caso uma página não carregue, o erro é listado por rede. Se o Chrome não estiver instalado, o processo falhará de forma explícita.
 
 ## Requisitos
 
 - Windows com **Node.js 22.16+** (suporte nativo à execução de TypeScript por remoção de tipos).
-- O preview do YouTube exige `YOUTUBE.mp4` e `LEGENDA_YOUTUBE.txt` na pasta do trabalho. O Instagram também exige sua mídia `INSTAGRAM.png`, `.jpg`, `.jpeg` ou `.mp4`, `LEGENDA_INSTAGRAM.txt` e a extensão INSSIST instalada no perfil do bot. A inspeção Feed V5 lê os pacotes ZIP na pasta `publicacoes`.
+- O preview do YouTube exige `YOUTUBE.mp4` e `LEGENDA_YOUTUBE.txt` na pasta do trabalho. O Instagram exige sua mídia `INSTAGRAM.png`, `.jpg`, `.jpeg` ou `.mp4`, `LEGENDA_INSTAGRAM.txt` e a extensão INSSIST instalada no perfil do bot. O TikTok exige `TIKTOK.mp4`, `.png`, `.jpg`, `.jpeg` ou `.webp` e `LEGENDA_TIKTOK.txt`. A inspeção Feed V5 lê os pacotes ZIP na pasta `publicacoes`.
 - A execução do modo navegador utiliza a dependência `playwright-core` e uma instalação local do Google Chrome. Não faz download automático do Chromium.
 
 ## Executar
@@ -54,6 +54,7 @@ Depois execute:
 
 ```bash
 npm run dev
+npm run preview:tiktok
 npm run preview:instagram
 npm run preview:youtube
 ```
@@ -75,7 +76,7 @@ npm run inspect
 npm run inspect -- --dir "D:\\programacao\\projetos\\bot-publicacao-gta\\publicacoes"
 ```
 
-`npm run inspect` usa o ambiente já definido no terminal, mas não carrega os arquivos `.env` e `.env.local` automaticamente. `npm run dev` prepara o Instagram e depois o YouTube sem clicar nos botões finais de publicação. `npm run preview:instagram` exige apenas a mídia e a legenda do Instagram no trabalho selecionado; use `-- --image-id <UUID>` quando houver vários trabalhos preparados. Nenhum desses comandos atualiza o Supabase.
+`npm run inspect` usa o ambiente já definido no terminal, mas não carrega os arquivos `.env` e `.env.local` automaticamente. `npm run dev` prepara TikTok, YouTube e Instagram sem clicar nos botões finais de publicação. Os comandos `preview:tiktok` e `preview:instagram` exigem apenas a mídia e a legenda da rede escolhida; use `-- --image-id <UUID>` quando houver vários trabalhos preparados. Nenhum desses comandos atualiza o Supabase.
 
 ## O que o leitor `npm run inspect` mostra no console
 

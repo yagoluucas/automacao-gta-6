@@ -8,12 +8,13 @@
     "node": ">=22.16.0"
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --experimental-strip-types src/cli.ts --chrome --instagram-preview --youtube-preview",
+    "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --experimental-strip-types src/cli.ts --chrome --tiktok-preview --youtube-preview --instagram-preview",
     "inspect": "node --experimental-strip-types src/cli.ts",
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "preview:youtube": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --experimental-strip-types src/cli.ts --chrome --youtube-preview",
-    "preview:instagram": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --experimental-strip-types src/cli.ts --chrome --instagram-preview"
+    "preview:instagram": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --experimental-strip-types src/cli.ts --chrome --instagram-preview",
+    "preview:tiktok": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --experimental-strip-types src/cli.ts --chrome --tiktok-preview"
   },
   "devDependencies": {
     "@types/node": "22.19.7",

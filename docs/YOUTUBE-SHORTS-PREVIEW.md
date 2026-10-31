@@ -9,7 +9,7 @@ npm test
 npm run dev -- --image-id <UUID_DA_IMAGEM>
 ```
 
-`npm run dev` abre as três abas, prepara primeiro o Instagram e depois executa o preview do YouTube. `npm run preview:youtube` executa apenas o fluxo do YouTube. Use `npm run inspect` para apenas inspecionar o pacote Feed V5. **Não há confirmação de publicação e nenhum registro do Supabase é alterado**. Cada execução do preview pode iniciar um novo upload, então evite repetir o comando sem necessidade.
+`npm run dev` abre as três abas, prepara primeiro o TikTok, depois o YouTube e por fim o Instagram. `npm run preview:youtube` executa apenas o fluxo do YouTube. Use `npm run inspect` para apenas inspecionar o pacote Feed V5. **Não há confirmação de publicação e nenhum registro do Supabase é alterado**. Cada execução do preview pode iniciar um novo upload, então evite repetir o comando sem necessidade.
 
 ## Contrato local do vídeo (provisório, separado do pacote Feed V5)
 

@@ -6,12 +6,14 @@ import { AppError } from "./errors/catalog.ts";
 import { inspectRoot, type InspectionResult } from "./inspector.ts";
 import { findYouTubeShortDrafts, selectYouTubeShortDraft } from "./publication/youtube-short-drafts.ts";
 import { findInstagramDrafts, readInstagramDraft, selectInstagramDraft, type InstagramDraft } from "./publication/instagram-draft.ts";
+import { findTikTokDrafts, readTikTokDraft, selectTikTokDraft, type TikTokDraft } from "./publication/tiktok-draft.ts";
 import { previewInstagram } from "./platforms/instagram/instagram-preview.ts";
+import { previewTikTok } from "./platforms/tiktok/tiktok-preview.ts";
 import { previewYouTubeShort, readYouTubePreviewConfig } from "./platforms/youtube/youtube-preview.ts";
 
 function directoryFromArgs(args: string[]): string {
   if (args.includes("--help") || args.includes("-h")) {
-    console.log("Uso: npm run dev -- --dir <pasta> (ou npm run preview:instagram -- --image-id <UUID>)\nPadrão: PUBLICATIONS_DIR ou ../publicacoes\nOs modos de prévia carregam .env e .env.local automaticamente.\nEste comando NÃO publica em redes sociais.");
+    console.log("Uso: npm run dev -- --dir <pasta> (ou npm run preview:tiktok -- --image-id <UUID>)\nPadrão: PUBLICATIONS_DIR ou ../publicacoes\nOs modos de prévia carregam .env e .env.local automaticamente.\nEste comando NÃO publica em redes sociais.");
     process.exit(0);
   }
   const idx = args.indexOf("--dir");
@@ -41,9 +43,10 @@ function show(result: InspectionResult): void {
 
 try {
   const root = directoryFromArgs(process.argv.slice(2));
+  const tiktokPreview = process.argv.includes("--tiktok-preview");
   const youtubePreview = process.argv.includes("--youtube-preview");
   const instagramPreview = process.argv.includes("--instagram-preview");
-  const anyPreview = youtubePreview || instagramPreview;
+  const anyPreview = tiktokPreview || youtubePreview || instagramPreview;
   const previewConfig = anyPreview ? readYouTubePreviewConfig(process.env) : undefined;
   if (anyPreview && !process.argv.includes("--chrome")) {
     throw new Error("Prévia de rede social exige o modo Chrome.");
@@ -56,6 +59,18 @@ try {
     console.error("[YOUTUBE] Nenhum YOUTUBE.mp4 preparado em PUBLICATIONS_DIR/AAAA-MM-DD/<image_id>/.");
   }
   const youtubeDraft = youtubePreview ? selectYouTubeShortDraft(youtubeDrafts, imageId) : undefined;
+  let tiktokDraft: TikTokDraft | undefined;
+  if (tiktokPreview) {
+    try {
+      tiktokDraft = youtubeDraft
+        ? await readTikTokDraft(path.dirname(youtubeDraft.videoPath), youtubeDraft.imageId)
+        : selectTikTokDraft(await findTikTokDrafts(root, imageId), imageId);
+    } catch (error) {
+      console.error("[TIKTOK] Não foi possível preparar o trabalho:", error instanceof Error ? error.message : error);
+      if (!youtubePreview && !instagramPreview) throw error;
+      process.exitCode = 1;
+    }
+  }
   let instagramDraft: InstagramDraft | undefined;
   if (instagramPreview) {
     try {
@@ -69,15 +84,17 @@ try {
     }
   }
   const session = process.argv.includes("--chrome")
-    ? await startSocialBrowser(process.env, instagramPreview && !youtubePreview ? "instagram" : "youtube") : null;
+    ? await startSocialBrowser(process.env, tiktokPreview ? "tiktok" : instagramPreview && !youtubePreview ? "instagram" : "youtube") : null;
   if (session) {
     console.log("[CHROME] Chrome aberto maximizado: Instagram, TikTok e YouTube.");
     if (session.navigationFailures.length) {
       console.warn("[CHROME] Abas com falha de carregamento:", session.navigationFailures.join(", "));
     }
   }
+  const previewNames = [tiktokPreview && "TikTok", youtubePreview && "YouTube", instagramPreview && "Instagram"]
+    .filter(Boolean).join(" + ");
   console.log(anyPreview
-    ? `GTA 6 PIRA | ${instagramPreview && youtubePreview ? "Prévia Instagram + YouTube" : instagramPreview ? "Prévia Instagram" : "Prévia YouTube"} | SEM PUBLICAR\nPasta: ${root}`
+    ? `GTA 6 PIRA | Prévia ${previewNames} | SEM PUBLICAR\nPasta: ${root}`
     : `GTA 6 PIRA | Leitor local V5 | MODO SOMENTE LEITURA\nPasta: ${root}`);
   let folderExists = true;
   try {
@@ -102,6 +119,29 @@ try {
   if (anyPreview) {
     if (!session) throw new Error("Prévia exige o modo Chrome.");
     if (!folderExists) throw new Error("Diretório local não disponível para prévia.");
+    if (tiktokDraft) {
+      try {
+        const tiktokTab = session.tabs.get("tiktok");
+        if (!tiktokTab) throw new Error("A aba do TikTok não foi aberta.");
+        await previewTikTok(tiktokTab, tiktokDraft, previewConfig!.navigationTimeoutMs);
+      } catch (error) {
+        console.error("[TIKTOK] Prévia não concluída:", error instanceof Error ? error.message : error);
+        process.exitCode = 1;
+      }
+    }
+    if (youtubePreview) {
+      if (!youtubeDraft) throw new Error("Nenhum vídeo selecionado para a prévia do YouTube.");
+      console.log("[YOUTUBE] Preparando rascunho para inspeção:", youtubeDraft.publicationId);
+      const youtubeTab = session.tabs.get("youtube");
+      if (!youtubeTab) throw new Error("A aba do YouTube não foi aberta.");
+      try {
+        await previewYouTubeShort(youtubeTab, youtubeDraft, previewConfig!);
+      } catch (error) {
+        if (!tiktokPreview && !instagramPreview) throw error;
+        console.error("[YOUTUBE] Prévia não concluída:", error instanceof Error ? error.message : error);
+        process.exitCode = 1;
+      }
+    }
     if (instagramDraft) {
       try {
         const instagramTab = session.tabs.get("instagram");
@@ -111,13 +151,6 @@ try {
         console.error("[INSTAGRAM] Prévia não concluída:", error instanceof Error ? error.message : error);
         process.exitCode = 1;
       }
-    }
-    if (youtubePreview) {
-      if (!youtubeDraft) throw new Error("Nenhum vídeo selecionado para a prévia do YouTube.");
-      console.log("[YOUTUBE] Preparando rascunho para inspeção:", youtubeDraft.publicationId);
-      const youtubeTab = session.tabs.get("youtube");
-      if (!youtubeTab) throw new Error("A aba do YouTube não foi aberta.");
-      await previewYouTubeShort(youtubeTab, youtubeDraft, previewConfig!);
     }
   }
   const results = folderExists && !anyPreview ? await inspectRoot(root) : [];
