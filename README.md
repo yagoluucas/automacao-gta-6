@@ -4,7 +4,7 @@ Este repositório começa com **somente leitura e logs no console**. Nenhum logi
 
 ## MVP 02 — Abrir Google Chrome antes da inspeção
 
-O comando `npm run dev` abre **uma janela nova do Google Chrome**, em tela cheia, com três abas (Instagram, TikTok e YouTube), antes de ler a pasta de publicações. Não executa login, não preenche credenciais e não publica. Use `npm run inspect` para executar somente o leitor, sem navegador.
+O comando `npm run dev` abre **uma janela nova do Google Chrome**, maximizada (sem F11), com três abas (Instagram, TikTok e YouTube), antes de ler a pasta de publicações. Não executa login, não preenche credenciais e não publica. Use `npm run inspect` para executar somente o leitor, sem navegador.
 
 Requisitos: Google Chrome instalado localmente e `npm install` para instalar `playwright-core` (não é necessário executar `playwright install`, pois o canal `chrome` usa o Chrome já instalado).
 
@@ -19,7 +19,7 @@ LINK_YOUTUBE=https://www.youtube.com/
 
 **Atenção:** os links precisam ser URLs puras, sem `[...](...)` da formatação Markdown. `USER_INSTAGRAM`, `PASSWORD_INSTAGRAM` e equivalentes, mesmo que estejam no `.env.local`, **não são lidos nesta fase**. Nunca registre credenciais ou arquivos de sessão no Git.
 
-O navegador usa o perfil próprio `.chrome-profile/`, ignorado pelo Git; ele não assume o controle do seu Chrome pessoal. Faça login manualmente se a rede solicitar. Evite iniciar dois bots simultaneamente usando o mesmo perfil. O programa continua aberto até você fechar a janela do Chrome. A opção de tela cheia é aplicada via `--start-fullscreen` e pode depender do sistema operacional/gerenciador de janelas.
+O navegador usa o perfil próprio `.chrome-profile/`, ignorado pelo Git; ele não assume o controle do seu Chrome pessoal. Faça login manualmente se a rede solicitar. Evite iniciar dois bots simultaneamente usando o mesmo perfil. O programa continua aberto até você fechar a janela do Chrome. A maximização é solicitada via `--start-maximized` e pode depender do sistema operacional/gerenciador de janelas.
 
 `npm run dev` continua executando o leitor e mostrando o resumo no console após iniciar as abas. Caso uma página não carregue, o erro é listado por rede, mas as outras abas continuam acessíveis. Se o Chrome não estiver instalado, o processo falhará de forma explícita.
 
