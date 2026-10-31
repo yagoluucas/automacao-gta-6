@@ -1,6 +1,7 @@
 import type { Page } from "playwright-core";
 import { pauseAfterInteraction } from "../../browser/interaction-delay.ts";
 import type { TikTokDraft } from "../../publication/tiktok-draft.ts";
+import { addPhotoSound, addVideoSound } from "./tiktok-sound.ts";
 
 /** Prepara a publicação no TikTok Studio e para antes do botão Publicar. */
 export async function previewTikTok(
@@ -51,11 +52,19 @@ export async function previewTikTok(
   await caption.fill(draft.caption, { timeout });
   await pauseAfterInteraction(uploadPage);
 
+  if (draft.mediaKind === "photo") {
+    await addPhotoSound(uploadPage, timeout);
+  } else {
+    await addVideoSound(uploadPage, timeout);
+  }
+
   const publish = draft.mediaKind === "video"
     ? uploadPage.locator('[data-e2e="post_video_button"]')
     : uploadPage.getByRole("button", { name: /^(Publicar|Post)$/i }).last();
   await publish.waitFor({ state: "visible", timeout });
+  await publish.scrollIntoViewIfNeeded({ timeout });
+  await pauseAfterInteraction(uploadPage);
   // Publicação futura: await publish.click({ timeout });
-  console.log("[TIKTOK] Legenda preenchida. Botão Publicar localizado para revisão manual; nenhum clique foi feito.");
+  console.log("[TIKTOK] Legenda e som preparados. Botão Publicar visível para revisão manual; nenhum clique foi feito.");
   return uploadPage;
 }

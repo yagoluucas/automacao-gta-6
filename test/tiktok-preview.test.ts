@@ -38,20 +38,35 @@ for (const mediaKind of ["photo", "video"] as const) {
     const control = (name: string) => ({
       first() { return this; },
       last() { return this; },
+      nth(index: number) { return control(`row:${index}`); },
+      locator(selector: string) { return control(name === "favorites-panel" ? "rows" :
+        name.startsWith("row:") && selector.includes("MusicPanelMusicItem__info") ? `sound-info:${name.slice(4)}` :
+        name.startsWith("row:") && selector.includes("MusicPickerView__addButton") ? `use-sound:${name.slice(4)}` : selector); },
+      filter() { return this; },
+      async count() { return name === "rows" ? 3 : 0; },
       async waitFor() { actions.push(`wait:${name}`); },
-      async getAttribute() { return mediaKind === "video" ? "true" : "false"; },
+      async getAttribute() { return name === "tab" && mediaKind === "video" ? "true" : "false"; },
       async click() { actions.push(`click:${name}`); },
       async fill(value: string) { actions.push(`fill:${name}:${value}`); },
+      async press(key: string) { actions.push(`press:${name}:${key}`); },
+      async scrollIntoViewIfNeeded() { actions.push(`scroll:${name}`); },
     });
     const uploadPage = {
       async bringToFront() { actions.push("focus:upload"); },
       async waitForTimeout(ms: number) { assert.ok(ms >= 5000 && ms <= 10000); actions.push("pause"); },
       getByRole(role: string, options: { name: RegExp }) {
-        return control(role === "tab" ? "tab" : options.name.test("Selecionar fotos") ? "select-photo" : "publish-photo");
+        return control(role === "tab" ? options.name.test("Favoritos") ? "favorites" : "tab" :
+          options.name.test("Selecionar fotos") ? "select-photo" :
+          options.name.test("Adicionar som") ? "add-sound" :
+          options.name.test("Salvar") ? "save" : "publish-photo");
       },
       locator(selector: string) {
+        assert.ok(!selector.includes("MusicPickerView__addButton"), "Use precisa estar limitado à faixa escolhida");
         return control(selector.includes("select_video_button") ? "select-video" :
-          selector.includes("post_video_button") ? "publish-video" : "caption");
+          selector.includes("post_video_button") ? "publish-video" :
+          selector.includes("panel-favorites") ? "favorites-panel" :
+          selector.includes('data-button-name="sounds"') ? "sounds" :
+          selector.includes("PropSettingSliderInput") ? "volume" : "caption");
       },
       async waitForEvent() { return { async setFiles(file: string) { actions.push(`file:${file}`); } }; },
     } as unknown as Page;
@@ -68,9 +83,25 @@ for (const mediaKind of ["photo", "video"] as const) {
     assert.ok(actions.indexOf("focus:upload") > actions.indexOf("click:upload-nav"));
     assert.ok(actions.indexOf(`file:${mediaPath}`) > actions.indexOf(`click:select-${mediaKind}`));
     assert.ok(actions.indexOf("fill:caption:Legenda\n#gta6") > actions.indexOf(`file:${mediaPath}`));
+    const soundAction = actions.find(action => /^click:sound-info:\d$/.test(action));
+    assert.ok(soundAction);
+    const useAction = soundAction.replace("sound-info", "use-sound");
+    assert.ok(actions.indexOf(useAction) > actions.indexOf(soundAction));
+    assert.ok(actions.includes(useAction.replace("click:", "wait:")));
+    if (mediaKind === "photo") {
+      assert.ok(actions.indexOf("click:add-sound") > actions.indexOf("fill:caption:Legenda\n#gta6"));
+      assert.ok(!actions.includes("click:save"));
+    } else {
+      assert.ok(actions.indexOf("click:sounds") > actions.indexOf("fill:caption:Legenda\n#gta6"));
+      assert.ok(actions.includes("fill:volume:-27"));
+      assert.ok(actions.indexOf("fill:volume:-27") > actions.indexOf(useAction));
+      assert.ok(actions.includes("press:volume:Tab"));
+      assert.ok(actions.indexOf("click:save") > actions.indexOf("fill:volume:-27"));
+    }
     assert.ok(actions.includes(`wait:publish-${mediaKind}`));
+    assert.ok(actions.indexOf(`scroll:publish-${mediaKind}`) > actions.indexOf(`wait:publish-${mediaKind}`));
     assert.ok(!actions.includes(`click:publish-${mediaKind}`));
     assert.equal(actions.filter(action => action === "pause").length,
-      actions.filter(action => /^(focus:|click:|fill:|file:)/.test(action)).length);
+      actions.filter(action => /^(focus:|click:|fill:|file:|press:|scroll:)/.test(action)).length);
   });
 }
