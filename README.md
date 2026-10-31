@@ -98,7 +98,7 @@ publicacoes/
       publifeed_2310261200.zip
 ```
 
-Os arquivos exemplo estão em `examples/`. O plugin Feed V5 entrega `LEGENDAS.txt`, `LEGENDA_INSTAGRAM.txt`, `LEGENDA_YOUTUBE.txt`, `LEGENDA_TIKTOK.txt` e PNGs individuais dentro de seu ZIP. Só as redes informadas em `manifest.publications` são consideradas agendadas. ZIPs com arquivos adicionais da V5 são aceitos, mas **não criam autorização de postagem em outras redes**.
+O plugin Feed V5 entrega `LEGENDAS.txt`, `LEGENDA_INSTAGRAM.txt`, `LEGENDA_YOUTUBE.txt`, `LEGENDA_TIKTOK.txt` e PNGs individuais dentro de seu ZIP. Só as redes informadas em `manifest.platforms` são consideradas agendadas. ZIPs com arquivos adicionais da V5 são aceitos, mas **não criam autorização de postagem em outras redes**.
 
 `ready.json` deve ser gravado por último pelo processo de preparação. Pode conter `{ "ready": true }`. O indicador não substitui a verificação completa feita pelo leitor.
 
