@@ -1,6 +1,8 @@
 import path from "node:path";
+import { stat } from "node:fs/promises";
 import { startSocialBrowser } from "./browser/chrome-startup.ts";
 import { captureError } from "./errors/handler.ts";
+import { AppError } from "./errors/catalog.ts";
 import { inspectRoot, type InspectionResult } from "./inspector.ts";
 
 function directoryFromArgs(args: string[]): string {
@@ -37,13 +39,33 @@ try {
   const root = directoryFromArgs(process.argv.slice(2));
   const session = process.argv.includes("--chrome") ? await startSocialBrowser() : null;
   if (session) {
-    console.log("[CHROME] Chrome aberto em tela cheia: Instagram, TikTok e YouTube.");
+    console.log("[CHROME] Chrome aberto maximizado: Instagram, TikTok e YouTube.");
     if (session.navigationFailures.length) {
       console.warn("[CHROME] Abas com falha de carregamento:", session.navigationFailures.join(", "));
     }
   }
   console.log(`GTA 6 PIRA | Leitor local V5 | MODO SOMENTE LEITURA\nPasta: ${root}`);
-  const results = await inspectRoot(root);
+  let folderExists = true;
+  try {
+    const info = await stat(root);
+    if (!info.isDirectory()) {
+      const record = await captureError(new Error("PUBLICATIONS_DIR_NOT_DIRECTORY"), { stage: "inspection" });
+      console.warn("[PASTA]", record.description, root);
+      folderExists = false;
+      process.exitCode = 1;
+    }
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      folderExists = false;
+      console.warn("[PASTA] Diretório de publicações não encontrado:", root);
+      console.warn("[PASTA] Configure PUBLICATIONS_DIR no .env ou .env.local. O Chrome continuará aberto.");
+      await captureError(new AppError("PUBLICATIONS_DIR_MISSING"), { stage: "inspection" });
+    } else {
+      throw error;
+    }
+  }
+  const results = folderExists ? await inspectRoot(root) : [];
   for (const result of results) {
     show(result);
     if (result.status === "ERROR") {
