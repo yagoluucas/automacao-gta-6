@@ -1,15 +1,20 @@
 import path from "node:path";
+import { stat } from "node:fs/promises";
+import { startSocialBrowser } from "./browser/chrome-startup.ts";
 import { captureError } from "./errors/handler.ts";
+import { AppError } from "./errors/catalog.ts";
 import { inspectRoot, type InspectionResult } from "./inspector.ts";
+import { findYouTubeShortDrafts, selectYouTubeShortDraft } from "./publication/youtube-short-drafts.ts";
+import { previewYouTubeShort, readYouTubePreviewConfig } from "./platforms/youtube/youtube-preview.ts";
 
 function directoryFromArgs(args: string[]): string {
   if (args.includes("--help") || args.includes("-h")) {
-    console.log("Uso: npm run dev -- --dir <pasta> (ou npm run inspect -- --dir <pasta>)\nPadrão: PUBLICATIONS_DIR ou ./publicacoes\nO modo dev carrega .env e .env.local automaticamente.\nEste comando NÃO publica em redes sociais.");
+    console.log("Uso: npm run dev -- --dir <pasta> (ou npm run inspect -- --dir <pasta>)\nPadrão: PUBLICATIONS_DIR ou ../publicacoes\nO modo dev carrega .env e .env.local automaticamente.\nEste comando NÃO publica em redes sociais.");
     process.exit(0);
   }
   const idx = args.indexOf("--dir");
   if (idx !== -1 && !args[idx + 1]) throw new Error("Informe uma pasta após --dir");
-  const raw = idx !== -1 ? args[idx + 1]! : process.env.PUBLICATIONS_DIR || path.join(process.cwd(), "publicacoes");
+  const raw = idx !== -1 ? args[idx + 1]! : process.env.PUBLICATIONS_DIR || path.join(process.cwd(), "..", "publicacoes");
   return path.resolve(raw);
 }
 
@@ -34,8 +39,46 @@ function show(result: InspectionResult): void {
 
 try {
   const root = directoryFromArgs(process.argv.slice(2));
+  const session = process.argv.includes("--chrome") ? await startSocialBrowser() : null;
+  if (session) {
+    console.log("[CHROME] Chrome aberto maximizado: Instagram, TikTok e YouTube.");
+    if (session.navigationFailures.length) {
+      console.warn("[CHROME] Abas com falha de carregamento:", session.navigationFailures.join(", "));
+    }
+  }
   console.log(`GTA 6 PIRA | Leitor local V5 | MODO SOMENTE LEITURA\nPasta: ${root}`);
-  const results = await inspectRoot(root);
+  let folderExists = true;
+  try {
+    const info = await stat(root);
+    if (!info.isDirectory()) {
+      const record = await captureError(new AppError("PUBLICATIONS_DIR_NOT_DIRECTORY"), { stage: "inspection" });
+      console.warn("[PASTA]", record.description, root);
+      folderExists = false;
+      process.exitCode = 1;
+    }
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      folderExists = false;
+      console.warn("[PASTA] Diretório de publicações não encontrado:", root);
+      console.warn("[PASTA] Configure PUBLICATIONS_DIR no .env ou .env.local. O Chrome continuará aberto.");
+      await captureError(new AppError("PUBLICATIONS_DIR_MISSING"), { stage: "inspection" });
+    } else {
+      throw error;
+    }
+  }
+  const youtubePreview = process.argv.includes("--youtube-preview");
+  if (youtubePreview) {
+    if (!session) throw new Error("Prévia do YouTube exige o modo Chrome.");
+    if (!folderExists) throw new Error("Diretório local não disponível para prévia.");
+    const idIndex = process.argv.indexOf("--image-id");
+    const imageId = idIndex < 0 ? undefined : process.argv[idIndex + 1];
+    if (idIndex >= 0 && !imageId) throw new Error("Informe um UUID após --image-id.");
+    const draft = selectYouTubeShortDraft(await findYouTubeShortDrafts(root), imageId);
+    console.log("[YOUTUBE] Preparando rascunho para inspeção:", draft.publicationId);
+    await previewYouTubeShort(session.context, draft, readYouTubePreviewConfig(process.env));
+  }
+  const results = folderExists && !youtubePreview ? await inspectRoot(root) : [];
   for (const result of results) {
     show(result);
     if (result.status === "ERROR") {
@@ -48,8 +91,12 @@ try {
   }
   const count = (status: InspectionResult["status"]) => results.filter((r) => r.status === status).length;
   console.log(`\nResumo: ${count("OK")} válidos, ${count("PENDING")} aguardando, ${count("ERROR")} com erro (${results.length} trabalho(s)).`);
-  if (!results.length) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
+  if (!results.length && !youtubePreview) console.log("Nenhum trabalho encontrado. Esperado: AAAA-MM-DD/<image_id>/manifest.json + ready.json + ZIP V5.");
   if (count("ERROR")) process.exitCode = 1;
+  if (session) {
+    console.log("[CHROME] Feche a janela do Chrome para encerrar.");
+    await new Promise<void>(resolve => session.context.once("close", () => resolve()));
+  }
 } catch (error) {
   try {
     const record = await captureError(error, { stage: "runtime" });

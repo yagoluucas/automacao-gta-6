@@ -122,7 +122,19 @@ export async function inspectJob(jobDir: string): Promise<InspectionResult> {
 /** Localiza <raiz>/AAAA-MM-DD/<image_id> sem seguir links simbólicos. */
 export async function inspectRoot(root: string): Promise<InspectionResult[]> {
   const results: InspectionResult[] = [];
-  const dates = (await readdir(root, { withFileTypes: true }))
+  // A pasta raiz é opcional durante a configuração inicial do bot.
+  // Apenas ENOENT da própria raiz significa uma fila ainda vazia.
+  // Não mascarar falta de permissão ou erro em diretórios internos.
+  let rootEntries: import("node:fs").Dirent[];
+  try {
+    const info = await stat(root);
+    if (!info.isDirectory()) throw Object.assign(new Error("O caminho de publicações não é uma pasta"), { code: "ENOTDIR" });
+    rootEntries = await readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+  const dates = rootEntries
     .filter((d) => d.isDirectory() && /^\d{4}-\d{2}-\d{2}$/.test(d.name))
     .sort((a, b) => a.name.localeCompare(b.name));
   for (const date of dates) {

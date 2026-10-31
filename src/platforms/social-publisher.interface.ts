@@ -88,10 +88,7 @@ export class PlatformStepNotImplementedError extends Error {
   readonly platform: Platform;
   readonly step: SocialPublisherStep;
 
-  constructor(
-    platform: Platform,
-    step: SocialPublisherStep,
-  ) {
+  constructor(platform: Platform, step: SocialPublisherStep) {
     super(`Etapa ainda não implementada: ${platform}.${step}`);
     this.name = "PlatformStepNotImplementedError";
     this.platform = platform;
