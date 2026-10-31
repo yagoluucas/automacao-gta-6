@@ -1,6 +1,6 @@
 import { open, readFile, readdir, lstat } from "node:fs/promises";
 import path from "node:path";
-import { parseManifest, parseReady } from "../contracts.ts";
+import { parseReady } from "../contracts.ts";
 import { isValidUuid } from "../ids.ts";
 
 const MAX_TEXT_BYTES = 32_000;
@@ -36,11 +36,23 @@ export async function findYouTubeShortDrafts(root: string): Promise<YouTubeShort
       const ready = JSON.parse(await readFile(path.join(dir, "ready.json"), "utf8")) as unknown;
       parseReady(ready);
       const raw = JSON.parse(await readFile(path.join(dir, "manifest.json"), "utf8")) as unknown;
-      const manifest = parseManifest(raw);
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Manifesto de vídeo inválido");
+      const manifest = raw as Record<string, unknown>;
       if (manifest.image_id !== entry.name) throw new Error("image_id do manifesto difere da pasta local");
-      const publication = manifest.publications.find(x => x.platform === "youtube");
-      if (!publication) continue;
-      if (!isValidUuid(publication.id)) throw new Error("ID da publicação YouTube inválido");
+      const ids = manifest.publication_ids;
+      const publicationRows = manifest.publications;
+      const id = Array.isArray(publicationRows)
+        ? (publicationRows as unknown[]).find(x => !!x && typeof x === "object" && "platform" in x && x.platform === "youtube")
+        : null;
+      const publicationId = id && typeof id === "object" && "id" in id ? id.id
+        : ids && typeof ids === "object" && "youtube" in ids ? ids.youtube : undefined;
+      const platforms = manifest.platforms;
+      if (Array.isArray(platforms) && !platforms.includes("youtube")) continue;
+      if (!publicationId) continue;
+      if (!isValidUuid(publicationId)) throw new Error("ID da publicação YouTube inválido");
+      const scheduledAt = id && typeof id === "object" && "scheduled_at" in id ? id.scheduled_at : manifest.scheduled_at;
+      if (typeof scheduledAt !== "string" || !/[zZ]|[+-]\\d{2}:\\d{2}$/.test(scheduledAt) ||
+          !Number.isFinite(Date.parse(scheduledAt))) throw new Error("scheduled_at YouTube inválido");
 
       const captionPath = path.join(dir, "LEGENDA_YOUTUBE.txt");
       const captionInfo = await lstat(captionPath);
@@ -60,8 +72,8 @@ export async function findYouTubeShortDrafts(root: string): Promise<YouTubeShort
         await handle.close();
       }
       drafts.push({
-        imageId: manifest.image_id, publicationId: publication.id,
-        scheduledAt: publication.scheduled_at, videoPath, caption, title,
+        imageId: entry.name, publicationId,
+        scheduledAt, videoPath, caption, title,
       });
     }
   }
