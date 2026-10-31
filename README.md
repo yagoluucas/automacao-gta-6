@@ -11,7 +11,7 @@ Requisitos: Google Chrome instalado localmente e `npm install` para instalar `pl
 Exemplo de `.env.local`:
 
 ```dotenv
-PUBLICATIONS_DIR=./publicacoes
+PUBLICATIONS_DIR=../publicacoes
 LINK_INSTAGRAM=https://www.instagram.com/
 LINK_TIKTOK=https://www.tiktok.com/pt-BR/
 LINK_YOUTUBE=https://www.youtube.com/
@@ -48,7 +48,7 @@ Crie um arquivo `.env.local` na raiz deste repositório, indicando **onde estão
 PUBLICATIONS_DIR="D:\\programacao\\projetos\\bot-publicacao-gta\\publicacoes"
 ```
 
-Substitua o caminho pelo diretório real do seu computador. Também é possível usar `PUBLICATIONS_DIR=./publicacoes` (caminho relativo à raiz do projeto). Consulte `.env.example` para um exemplo sem dados privados.
+Substitua o caminho pelo diretório real do seu computador. Também é possível usar `PUBLICATIONS_DIR=../publicacoes` (caminho relativo à raiz do projeto). Consulte `.env.example` para um exemplo sem dados privados.
 
 Depois execute:
 
@@ -58,7 +58,7 @@ npm run dev
 
 O script lê automaticamente os arquivos opcionais `.env` e `.env.local`, nessa ordem, usando o suporte nativo do Node.js. **Não precisa instalar `dotenv`**. O arquivo `.env.local` não é enviado ao Git.
 
-A prioridade da configuração é: **`--dir` > variável `PUBLICATIONS_DIR` já definida no terminal > `.env.local` > `.env` > `./publicacoes`**. Se os dois arquivos de ambiente não existirem, o comando continua funcionando com o diretório padrão.
+A prioridade da configuração é: **`--dir` > variável `PUBLICATIONS_DIR` já definida no terminal > `.env.local` > `.env` > `../publicacoes`**. Se os dois arquivos de ambiente não existirem, o comando continua funcionando com o diretório padrão.
 
 Para selecionar outra pasta apenas em uma execução:
 
