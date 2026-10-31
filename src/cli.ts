@@ -49,7 +49,7 @@ try {
   try {
     const info = await stat(root);
     if (!info.isDirectory()) {
-      const record = await captureError(new Error("PUBLICATIONS_DIR_NOT_DIRECTORY"), { stage: "inspection" });
+      const record = await captureError(new AppError("PUBLICATIONS_DIR_NOT_DIRECTORY"), { stage: "inspection" });
       console.warn("[PASTA]", record.description, root);
       folderExists = false;
       process.exitCode = 1;
